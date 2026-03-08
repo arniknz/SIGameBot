@@ -34,7 +34,7 @@ exclude = [
 
 [tool.ruff.format]
 # Аналогично black, двойные кавычки
-quote-style = "double"
+quote-style = "single"
 
 # Аналогично black, пробелы вместо табов
 indent-style = "space"
