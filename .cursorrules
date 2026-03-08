@@ -1,0 +1,198 @@
+# Jeopardy Game Telegram Bot - Project Context
+
+## Technology Stack
+- Python 3.10+
+- asyncio, aiohttp for Telegram API communication
+- PostgreSQL (asyncpg or SQLAlchemy)
+- Pure Telegram API (no aiogram or other libraries)
+- RabbitMQ (optional, for message queue)
+- Docker, docker-compose
+
+## Bot Architecture (from Habr article)
+- **Poller** (single instance) - receives updates from Telegram, puts them into queue
+- **Worker** (multiple instances) - takes tasks from queue, executes business logic
+- **Shared asyncio.Queue** for poller -> workers communication
+- **TgClient** - class for Telegram API methods (getUpdates, sendMessage, etc.)
+
+## Database Entities
+```sql
+-- User
+- id: BIGSERIAL PRIMARY KEY
+- telegram_id: BIGINT UNIQUE NOT NULL
+- username: VARCHAR(255)
+- created_at: TIMESTAMP
+
+-- Game
+- id: UUID PRIMARY KEY DEFAULT gen_random_uuid()
+- chat_id: BIGINT NOT NULL
+- status: VARCHAR(20) DEFAULT 'waiting'  -- waiting, active, finished
+- current_player_id: UUID REFERENCES participant(id)
+- host_id: UUID REFERENCES user(id)
+- created_at: TIMESTAMP
+- finished_at: TIMESTAMP
+
+-- Participant
+- id: UUID PRIMARY KEY DEFAULT gen_random_uuid()
+- user_id: UUID REFERENCES user(id)
+- game_id: UUID REFERENCES game(id)
+- score: INTEGER DEFAULT 0
+- joined_at: TIMESTAMP
+- is_active: BOOLEAN DEFAULT TRUE
+- UNIQUE(game_id, user_id)
+
+-- Topic
+- id: UUID PRIMARY KEY DEFAULT gen_random_uuid()
+- title: TEXT NOT NULL UNIQUE
+
+-- Question
+- id: UUID PRIMARY KEY DEFAULT gen_random_uuid()
+- topic_id: UUID REFERENCES topic(id)
+- text: TEXT NOT NULL
+- answer: TEXT NOT NULL
+- cost: INTEGER NOT NULL CHECK (cost > 0)
+
+-- QuestionInGame
+- id: UUID PRIMARY KEY DEFAULT gen_random_uuid()
+- game_id: UUID REFERENCES game(id)
+- question_id: UUID REFERENCES question(id)
+- status: VARCHAR(20) DEFAULT 'pending'  -- pending, asked, answered
+- asked_by: UUID REFERENCES participant(id)
+- answered_by: UUID REFERENCES participant(id)
+- asked_at: TIMESTAMP
+- answered_at: TIMESTAMP
+- UNIQUE(game_id, question_id)
+
+-- GameState
+- id: UUID PRIMARY KEY DEFAULT gen_random_uuid()
+- game_id: UUID UNIQUE REFERENCES game(id)
+- status: VARCHAR(20)  -- choosing_question, waiting_buzzer, waiting_answer, paused
+- current_question_id: UUID REFERENCES question_in_game(id)
+- buzzer_pressed_by: UUID REFERENCES participant(id)
+- buzzer_pressed_at: TIMESTAMP
+- timer_ends_at: TIMESTAMP
+- updated_at: TIMESTAMP
+
+TG BOT COMMANDS
+
+Command           Description                      Access
+/start            Create new game or join existing Everyone
+/join             Join game as player              Everyone
+/leave            Leave current game               Everyone
+/spectate         Become spectator                 Everyone
+/start_game       Start the game                   Host only
+/stop             Stop game prematurely            Host only
+/score            Show current score in this game  Everyone
+/rules            Game rules                       Everyone
+/help             List all commands                Everyone
+/answer <text>    Submit answer                    Player who pressed buzzer
+/buzzer           answer button                    All players
+/add_topic <name> Create new topic                 Host only
+/add_question     Add question (step by step)      Host only
+/remove_question <id> Delete question              Host only
+/remove_topic <id>    Delete topic                 Host only
+/pause            Pause game                       Host only
+/resume           Resume game                      Host only
+
+
+Game Flow Logic
+Lobby (status = waiting)
+
+After /start, game created, first user becomes host
+
+Players join via /join
+
+Host presses /start_game → transition to active
+
+Game Start
+
+Random current_player selected from participants
+
+QuestionInGame records created for all questions (status = pending)
+
+Transition to choosing_question state
+
+Question Selection (choosing_question)
+
+Bot shows board: topics + costs of unanswered questions
+
+Only current_player can select
+
+On selection: QuestionInGame.status = asked, asked_by = current_player
+
+Bot asks question, transition to waiting_buzzer, 10 sec timer
+
+Waiting for Buzzer (waiting_buzzer)
+
+All players can press /buzzer
+
+First to press: buzzer_pressed_by = this player, transition to waiting_answer, 15 sec timer
+
+Timeout (10 sec): "No one pressed. Correct answer: X", question burns (answered without answerer), return to choosing_question
+
+Waiting for Answer (waiting_answer)
+
+Only buzzer_pressed_by can send /answer
+
+Correct: +cost to score, QuestionInGame.answered_by = player, current_player = answerer
+
+Wrong: -cost from score, question burns, current_player unchanged
+
+Timeout (15 sec): question burns, current_player unchanged
+
+Return to choosing_question (if questions remain)
+
+Game End
+
+All QuestionInGame have status = answered
+
+Show leaderboard (sorted by score)
+
+Game.status = finished
+
+Project structure:
+
+SIGameBot/
+├── .env
+├── .cursorrules
+├── docker-compose.yml
+├── requirements.txt
+├── README.md
+│
+├── bot/
+│   ├── __init__.py
+│   ├── base.py          # Bot class
+│   ├── poller.py        # Poller
+│   ├── worker.py        # Worker
+│   ├── handlers.py      # command handlers
+│   └── keyboard.py      # keyboards
+│
+├── clients/
+│   ├── __init__.py
+│   ├── tg.py            # TgClient for Telegram API
+│   └── schemas.py       # dataclasses for Telegram objects
+│
+├── db/
+│   ├── __init__.py
+│   ├── database.py      # DB connection
+│   ├── models.py        # SQLAlchemy models
+│   └── queries.py       # database queries
+│
+├── migrations/
+│   └── init.sql         # initial DB schema
+
+
+Coding Rules:
+
+All Telegram API calls through TgClient using aiohttp
+
+Poller contains NO business logic, only receiving and queueing
+
+Workers execute business logic, work with database
+
+Queue is asyncio.Queue (shared between poller and workers)
+
+Worker count controlled by concurrent_workers parameter
+
+Error handling and logging required
+
+Timers stored in GameState.timer_ends_at and checked by workers
