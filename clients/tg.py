@@ -63,10 +63,13 @@ class TgClient:
         return [clients.schemas.Update.from_dict(u) for u in result]
 
     async def send_message(self, chat_id: int, text: str) -> dict:
-        return await self._post('sendMessage', {
-            'chat_id': chat_id,
-            'text': text,
-        })
+        return await self._post(
+            'sendMessage',
+            {
+                'chat_id': chat_id,
+                'text': text,
+            },
+        )
 
     async def send_keyboard(
         self,
@@ -74,13 +77,16 @@ class TgClient:
         text: str,
         buttons: list[list[dict]],
     ) -> dict:
-        return await self._post('sendMessage', {
-            'chat_id': chat_id,
-            'text': text,
-            'reply_markup': {
-                'inline_keyboard': buttons,
+        return await self._post(
+            'sendMessage',
+            {
+                'chat_id': chat_id,
+                'text': text,
+                'reply_markup': {
+                    'inline_keyboard': buttons,
+                },
             },
-        })
+        )
 
     async def answer_callback(
         self,

@@ -21,7 +21,8 @@ class Bot:
 
     async def start(self) -> None:
         logger.info(
-            'Bot starting with %d workers', len(self._workers),
+            'Bot starting with %d workers',
+            len(self._workers),
         )
         await self._poller.start()
         for worker in self._workers:

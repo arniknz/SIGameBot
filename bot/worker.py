@@ -28,7 +28,10 @@ class Worker:
             if update.message.from_user:
                 username = update.message.from_user.first_name
             logger.info(
-                'Worker-%d: message from %s: %s', self._id, username, text,
+                'Worker-%d: message from %s: %s',
+                self._id,
+                username,
+                text,
             )
             await self._tg.send_message(chat_id, f'Echo: {text}')
 
