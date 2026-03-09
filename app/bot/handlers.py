@@ -49,9 +49,7 @@ class Handlers:
             return update.callback_query.message.chat.id
         return None
 
-    async def _handle_message(
-        self, update: clients.schemas.Update
-    ) -> None:
+    async def _handle_message(self, update: clients.schemas.Update) -> None:
         msg = update.message
         if not msg or not msg.text:
             return
@@ -121,9 +119,7 @@ class Handlers:
                     chat_id, telegram_id, username
                 )
             case "/start_game":
-                return await self._logic.handle_start_game(
-                    chat_id, telegram_id
-                )
+                return await self._logic.handle_start_game(chat_id, telegram_id)
             case "/score":
                 return await self._logic.handle_score(chat_id)
             case _:
@@ -157,9 +153,7 @@ class Handlers:
         if handler:
             return await handler()
         if command == "/add_topic":
-            self._dialog.start_add_topic(
-                telegram_id, game_chat_id=0
-            )
+            self._dialog.start_add_topic(telegram_id, game_chat_id=0)
             return [
                 game.schemas.GameResponse(
                     chat_id=chat_id,
@@ -169,9 +163,7 @@ class Handlers:
         if command in ("/done", "/cancel"):
             self._dialog.clear(telegram_id)
             return [
-                game.schemas.GameResponse(
-                    chat_id=chat_id, text="OK, done."
-                )
+                game.schemas.GameResponse(chat_id=chat_id, text="OK, done.")
             ]
         return [
             game.schemas.GameResponse(
@@ -180,9 +172,7 @@ class Handlers:
             )
         ]
 
-    async def _handle_callback(
-        self, update: clients.schemas.Update
-    ) -> None:
+    async def _handle_callback(self, update: clients.schemas.Update) -> None:
         cb = update.callback_query
         if not cb:
             return
@@ -217,9 +207,7 @@ class Handlers:
             "leave": lambda: self._logic.handle_leave(
                 chat_id, telegram_id, username
             ),
-            "stop": lambda: self._logic.handle_stop(
-                chat_id, telegram_id
-            ),
+            "stop": lambda: self._logic.handle_stop(chat_id, telegram_id),
             "buzzer": lambda: self._logic.handle_buzzer(
                 chat_id, telegram_id, username
             ),
@@ -229,9 +217,7 @@ class Handlers:
         handler = simple.get(data)
         if handler:
             return await handler()
-        return await self._route_callback_prefixed(
-            chat_id, telegram_id, data
-        )
+        return await self._route_callback_prefixed(chat_id, telegram_id, data)
 
     async def _route_callback_prefixed(
         self,
@@ -256,9 +242,7 @@ class Handlers:
                 chat_id, telegram_id, data[13:]
             )
         if data.startswith("addq_topic:"):
-            return self._handle_addq_topic_cb(
-                chat_id, telegram_id, data[11:]
-            )
+            return self._handle_addq_topic_cb(chat_id, telegram_id, data[11:])
         return []
 
     def _handle_addq_topic_cb(
@@ -269,9 +253,7 @@ class Handlers:
     ) -> list[game.schemas.GameResponse]:
         if value == "cancel":
             return [
-                game.schemas.GameResponse(
-                    chat_id=chat_id, text="Cancelled."
-                )
+                game.schemas.GameResponse(chat_id=chat_id, text="Cancelled.")
             ]
         self._dialog.start_add_question(
             telegram_id, game_chat_id=0, topic_id=value
@@ -290,9 +272,7 @@ class Handlers:
         text: str,
     ) -> list[game.schemas.GameResponse]:
         if text.startswith("/"):
-            cmd = self._strip_mention(
-                text.split(maxsplit=1)[0]
-            ).lower()
+            cmd = self._strip_mention(text.split(maxsplit=1)[0]).lower()
             if cmd in ("/cancel", "/done"):
                 self._dialog.clear(telegram_id)
                 return [
@@ -309,9 +289,7 @@ class Handlers:
         prompt: str | None = None
         match state.step:
             case bot.dialog.STEP_AWAIT_TOPIC_NAME:
-                return await self._dialog_topic_name(
-                    telegram_id, chat_id, text
-                )
+                return await self._dialog_topic_name(telegram_id, chat_id, text)
             case bot.dialog.STEP_AWAIT_QUESTION_TEXT:
                 state.question_text = text
                 self._dialog.advance(
@@ -391,9 +369,7 @@ class Handlers:
                         resp.chat_id, resp.text, resp.keyboard
                     )
                 else:
-                    await self._tg.send_message(
-                        resp.chat_id, resp.text
-                    )
+                    await self._tg.send_message(resp.chat_id, resp.text)
             except Exception:
                 logger.exception(
                     "Failed to send response to chat %d",

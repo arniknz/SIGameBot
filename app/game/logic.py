@@ -385,9 +385,7 @@ class GameLogic:
             except ValueError:
                 qig_id = None
             detail = (
-                await db.queries.get_qig_detail(s, qig_id)
-                if qig_id
-                else None
+                await db.queries.get_qig_detail(s, qig_id) if qig_id else None
             )
             if not detail or detail[0].status != "pending":
                 return [self._resp(chat_id, "Question not found.")]
