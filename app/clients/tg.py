@@ -3,12 +3,11 @@ from __future__ import annotations
 import logging
 
 import aiohttp
-
 import clients.schemas
 
 logger = logging.getLogger(__name__)
 
-API_BASE = 'https://api.telegram.org/bot{token}/{method}'
+API_BASE = "https://api.telegram.org/bot{token}/{method}"
 
 
 class TgClient:
@@ -29,12 +28,12 @@ class TgClient:
         url = self._url(method)
         async with self.session.get(url, params=params) as resp:
             data = await resp.json()
-            if not data.get('ok'):
-                logger.error('Telegram API error: %s', data)
+            if not data.get("ok"):
+                logger.error("Telegram API error: %s", data)
                 raise RuntimeError(
-                    f'Telegram API error: {data.get("description")}',
+                    f"Telegram API error: {data.get('description')}",
                 )
-            return data['result']
+            return data["result"]
 
     async def _post(
         self,
@@ -44,30 +43,30 @@ class TgClient:
         url = self._url(method)
         async with self.session.post(url, json=payload) as resp:
             data = await resp.json()
-            if not data.get('ok'):
-                logger.error('Telegram API error: %s', data)
+            if not data.get("ok"):
+                logger.error("Telegram API error: %s", data)
                 raise RuntimeError(
-                    f'Telegram API error: {data.get("description")}',
+                    f"Telegram API error: {data.get('description')}",
                 )
-            return data['result']
+            return data["result"]
 
     async def get_updates(
         self,
         offset: int | None = None,
-        timeout: int = 30,
+        poll_timeout: int = 30,
     ) -> list[clients.schemas.Update]:
-        params: dict = {'timeout': timeout}
+        params: dict = {"timeout": poll_timeout}
         if offset is not None:
-            params['offset'] = offset
-        result = await self._request('getUpdates', **params)
-        return [clients.schemas.Update.from_dict(u) for u in result]
+            params["offset"] = offset
+        result = await self._request("getUpdates", **params)
+        return [clients.schemas.Update.model_validate(u) for u in result]
 
     async def send_message(self, chat_id: int, text: str) -> dict:
         return await self._post(
-            'sendMessage',
+            "sendMessage",
             {
-                'chat_id': chat_id,
-                'text': text,
+                "chat_id": chat_id,
+                "text": text,
             },
         )
 
@@ -78,12 +77,12 @@ class TgClient:
         buttons: list[list[dict]],
     ) -> dict:
         return await self._post(
-            'sendMessage',
+            "sendMessage",
             {
-                'chat_id': chat_id,
-                'text': text,
-                'reply_markup': {
-                    'inline_keyboard': buttons,
+                "chat_id": chat_id,
+                "text": text,
+                "reply_markup": {
+                    "inline_keyboard": buttons,
                 },
             },
         )
@@ -93,10 +92,10 @@ class TgClient:
         callback_query_id: str,
         text: str | None = None,
     ) -> dict:
-        payload: dict = {'callback_query_id': callback_query_id}
+        payload: dict = {"callback_query_id": callback_query_id}
         if text is not None:
-            payload['text'] = text
-        return await self._post('answerCallbackQuery', payload)
+            payload["text"] = text
+        return await self._post("answerCallbackQuery", payload)
 
     async def close(self) -> None:
         if self._session and not self._session.closed:

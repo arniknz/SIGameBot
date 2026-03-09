@@ -26,25 +26,25 @@ class Poller:
             try:
                 updates = await self._tg.get_updates(
                     offset=self._offset,
-                    timeout=30,
+                    poll_timeout=30,
                 )
                 for update in updates:
                     self._offset = update.update_id + 1
                     await self._queue.put(update)
-                    logger.debug('Queued update %d', update.update_id)
+                    logger.debug("Queued update %d", update.update_id)
             except asyncio.CancelledError:
                 raise
             except Exception:
-                logger.exception('Poller error, retrying in 5s')
+                logger.exception("Poller error, retrying in 5s")
                 await asyncio.sleep(5)
 
     async def start(self) -> None:
-        logger.info('Poller starting')
+        logger.info("Poller starting")
         self._running = True
         self._task = asyncio.create_task(self._poll())
 
     async def stop(self) -> None:
-        logger.info('Poller stopping')
+        logger.info("Poller stopping")
         self._running = False
         if self._task:
             self._task.cancel()
