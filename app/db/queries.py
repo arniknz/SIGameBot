@@ -291,7 +291,8 @@ async def all_question_ids(
     s: sqlalchemy.ext.asyncio.AsyncSession,
 ) -> list[uuid.UUID]:
     stmt = sqlalchemy.select(game.models.QuestionModel.id)
-    return [r[0] for r in (await s.execute(stmt)).all()]
+    rows = await s.execute(stmt)
+    return [r[0] for r in rows.all()]
 
 
 async def delete_question(
