@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import uuid
 
+import game.constants
 import game.models
 import sqlalchemy
 import sqlalchemy.ext.asyncio
-import game.constants
 
 
 class QuestionRepository:
@@ -129,7 +129,7 @@ class QuestionRepository:
     async def get_pending_board(
         self,
         game_id: uuid.UUID,
-    ) -> list[tuple]:
+    ) -> list[sqlalchemy.Row[tuple[uuid.UUID, str, int, str, str]]]:
         statement = (
             sqlalchemy.select(
                 game.models.QuestionInGameModel.id,
@@ -161,7 +161,18 @@ class QuestionRepository:
     async def get_question_in_game_detail(
         self,
         question_in_game_id: uuid.UUID,
-    ) -> tuple | None:
+    ) -> (
+        sqlalchemy.Row[
+            tuple[
+                game.models.QuestionInGameModel,
+                str,
+                str,
+                str,
+                int,
+            ]
+        ]
+        | None
+    ):
         statement = (
             sqlalchemy.select(
                 game.models.QuestionInGameModel,
@@ -185,7 +196,7 @@ class QuestionRepository:
 
     async def topics_with_question_counts(
         self,
-    ) -> list[tuple[game.models.TopicModel, int]]:
+    ) -> list[sqlalchemy.Row[tuple[game.models.TopicModel, int]]]:
         statement = (
             sqlalchemy.select(
                 game.models.TopicModel,

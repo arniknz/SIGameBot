@@ -5,13 +5,13 @@ import typing
 
 import sqlalchemy
 import sqlalchemy.orm
-import game.models.base
+from game.models.base import Base
 
 if typing.TYPE_CHECKING:
     from game.models.game import ParticipantModel
 
 
-class UserModel(game.models.base.Base):
+class UserModel(Base):
     __tablename__ = "users"
 
     id: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(

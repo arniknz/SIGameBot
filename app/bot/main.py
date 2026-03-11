@@ -45,7 +45,10 @@ async def main() -> None:
     stop_event = asyncio.Event()
 
     def _shutdown(sig: signal.Signals) -> None:
-        logger.info("Received %s, shutting down...", sig.name)
+        logger.info(
+            "Received %s — initiating graceful shutdown",
+            sig.name,
+        )
         stop_event.set()
 
     for sig in (signal.SIGINT, signal.SIGTERM):

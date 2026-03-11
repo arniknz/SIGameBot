@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import dataclasses
 import typing
 
@@ -10,13 +8,13 @@ import game.constants
 class GameResponse:
     chat_id: int
     text: str
-    keyboard: list[list[dict]] | None = None
+    keyboard: list[list[dict[str, str]]] | None = None
 
 
 @dataclasses.dataclass
 class ServiceResponse:
     chat_id: int
-    view: str
+    view: game.constants.ViewName
     payload: dict[str, typing.Any] = dataclasses.field(default_factory=dict)
 
 

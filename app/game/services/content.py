@@ -6,6 +6,7 @@ import uuid
 import db.repositories.game
 import db.repositories.question
 import db.repositories.user
+import game.constants
 import game.schemas
 import sqlalchemy.ext.asyncio
 
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def _result(
-    chat_id: int, view: str, **payload: object
+    chat_id: int, view: game.constants.ViewName, **payload: object
 ) -> game.schemas.ServiceResponse:
     return game.schemas.ServiceResponse(
         chat_id=chat_id,
@@ -44,12 +45,28 @@ class ContentService:
 
             existing = await question_repo.get_topic_by_title(topic_name)
             if existing is not None:
-                return [_result(chat_id, "plain", text="Topic already exists.")]
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="⚠️ Topic already exists.",
+                    )
+                ]
 
             new_topic = await question_repo.create_topic(topic_name)
-            logger.info("Topic '%s' created (id=%s)", topic_name, new_topic.id)
+            logger.info(
+                "Topic '%s' created (id=%s)",
+                topic_name,
+                new_topic.id,
+            )
 
-            return [_result(chat_id, "plain", text="Topic created successfully.")]
+            return [
+                _result(
+                    chat_id,
+                    game.constants.ViewName.PLAIN,
+                    text=f"✅ Topic «{topic_name}» created!",
+                )
+            ]
 
     async def handle_add_question(
         self,
@@ -66,7 +83,13 @@ class ContentService:
             try:
                 topic_id = uuid.UUID(topic_id_str)
             except ValueError:
-                return [_result(chat_id, "plain", text="Invalid topic ID.")]
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="⚠️ Invalid topic ID.",
+                    )
+                ]
 
             new_question = await question_repo.create_question(
                 topic_id,
@@ -87,10 +110,11 @@ class ContentService:
             return [
                 _result(
                     chat_id,
-                    "plain",
+                    game.constants.ViewName.PLAIN,
                     text=(
-                        f"Question added (#{question_count} in this topic), "
-                        f"cost: {cost} points."
+                        f"✅ Question added "
+                        f"(#{question_count} in topic), "
+                        f"worth {cost} points!"
                     ),
                 )
             ]
@@ -104,10 +128,23 @@ class ContentService:
 
             topics = await question_repo.all_topics()
             if not topics:
-                return [_result(chat_id, "plain", text="No topics yet.")]
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text=(
+                            "📭 No topics yet. "
+                            "Create one with /add_topic <name>"
+                        ),
+                    )
+                ]
 
             return [
-                _result(chat_id, "topic_select_for_add", topics=topics),
+                _result(
+                    chat_id,
+                    game.constants.ViewName.TOPIC_SELECT_FOR_ADD,
+                    topics=topics,
+                ),
             ]
 
     async def handle_delete_topic(
@@ -122,12 +159,18 @@ class ContentService:
                 await question_repo.topics_with_question_counts()
             )
             if not topics_with_counts:
-                return [_result(chat_id, "plain", text="No topics to delete.")]
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="📭 No topics to delete.",
+                    )
+                ]
 
             return [
                 _result(
                     chat_id,
-                    "topic_select_for_delete",
+                    game.constants.ViewName.TOPIC_SELECT_FOR_DELETE,
                     topics_with_counts=topics_with_counts,
                 )
             ]
@@ -144,7 +187,13 @@ class ContentService:
             try:
                 topic_id = uuid.UUID(topic_id_str)
             except ValueError:
-                return [_result(chat_id, "plain", text="Invalid topic ID.")]
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="⚠️ Invalid topic ID.",
+                    )
+                ]
 
             deleted_count = await question_repo.delete_topic(topic_id)
 
@@ -157,8 +206,8 @@ class ContentService:
             return [
                 _result(
                     chat_id,
-                    "plain",
-                    text=f"Topic deleted with {deleted_count} question(s).",
+                    game.constants.ViewName.PLAIN,
+                    text=(f"🗑 Topic deleted with {deleted_count} question(s)."),
                 )
             ]
 
@@ -177,15 +226,15 @@ class ContentService:
                 return [
                     _result(
                         chat_id,
-                        "plain",
-                        text="No topics with questions to delete.",
+                        game.constants.ViewName.PLAIN,
+                        text="📭 No topics with questions to delete.",
                     )
                 ]
 
             return [
                 _result(
                     chat_id,
-                    "topic_select_for_delete_question",
+                    game.constants.ViewName.TOPIC_SELECT_FOR_DELETE_QUESTION,
                     topics_with_counts=topics_with_counts,
                 )
             ]
@@ -201,16 +250,28 @@ class ContentService:
             try:
                 topic_id = uuid.UUID(topic_id_str)
             except ValueError:
-                return [_result(chat_id, "plain", text="Invalid topic ID.")]
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="⚠️ Invalid topic ID.",
+                    )
+                ]
 
             questions = await question_repo.get_questions_by_topic(topic_id)
             if not questions:
-                return [_result(chat_id, "plain", text="No questions in this topic.")]
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="📭 No questions in this topic.",
+                    )
+                ]
 
             return [
                 _result(
                     chat_id,
-                    "question_select_for_delete",
+                    game.constants.ViewName.QUESTION_SELECT_FOR_DELETE,
                     questions=questions,
                 )
             ]
@@ -227,56 +288,106 @@ class ContentService:
             try:
                 question_id = uuid.UUID(question_id_str)
             except ValueError:
-                return [_result(chat_id, "plain", text="Invalid question ID.")]
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="⚠️ Invalid question ID.",
+                    )
+                ]
 
             deleted = await question_repo.delete_question(question_id)
             if not deleted:
                 return [
                     _result(
                         chat_id,
-                        "plain",
-                        text="Question not found or already deleted.",
+                        game.constants.ViewName.PLAIN,
+                        text="⚠️ Question not found or already deleted.",
                     )
                 ]
 
             logger.info("Question %s deleted", question_id)
 
-            return [_result(chat_id, "plain", text="Question deleted.")]
+            return [
+                _result(
+                    chat_id,
+                    game.constants.ViewName.PLAIN,
+                    text="🗑 Question deleted!",
+                )
+            ]
 
     async def handle_my_games(
         self,
         chat_id: int,
         telegram_id: int,
     ) -> list[game.schemas.ServiceResponse]:
-        async with self._session_factory() as session, session.begin():
-            user_repo = db.repositories.user.UserRepository(session)
-            game_repo = db.repositories.game.GameRepository(session)
-
-            user = await user_repo.get_by_telegram_id(telegram_id)
-            if user is None:
-                return [_result(chat_id, "plain", text="No games yet.")]
-
-            hosted_games = await game_repo.get_hosted_by(user.id)
-            if not hosted_games:
-                return [
-                    _result(chat_id, "plain", text="No active hosted games.")
-                ]
-
-            lines = ["🎮 Your active hosted games:\n"]
-            lines.extend(
-                f"• Chat {hg.chat_id} — "
-                f"status: {hg.status}, "
-                f"created: {hg.created_at:%Y-%m-%d %H:%M}"
-                for hg in hosted_games
+        async with (
+            self._session_factory() as session,
+            session.begin(),
+        ):
+            user_repo = db.repositories.user.UserRepository(
+                session
+            )
+            game_repo = db.repositories.game.GameRepository(
+                session
             )
 
-            return [_result(chat_id, "plain", text="\n".join(lines))]
+            user = await user_repo.get_by_telegram_id(
+                telegram_id
+            )
+            if user is None:
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text=(
+                            "🎮 No games yet. "
+                            "Add me to a group and use /start!"
+                        ),
+                    )
+                ]
+
+            hosted = (
+                await game_repo.get_hosted_with_player_counts(
+                    user.id
+                )
+            )
+            if not hosted:
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="🎮 No active hosted games.",
+                    )
+                ]
+
+            games_payload = [
+                {
+                    "chat_id": g.chat_id,
+                    "status": str(g.status),
+                    "player_count": count,
+                    "created_at": (
+                        g.created_at.strftime("%Y-%m-%d %H:%M")
+                        if g.created_at
+                        else "?"
+                    ),
+                }
+                for g, count in hosted
+            ]
+
+            return [
+                _result(
+                    chat_id,
+                    game.constants.ViewName.MY_GAMES,
+                    games=games_payload,
+                )
+            ]
 
     async def handle_help(
         self,
         chat_id: int,
     ) -> list[game.schemas.ServiceResponse]:
-        return [_result(chat_id, "help")]
+        return [_result(chat_id, game.constants.ViewName.HELP)]
 
     async def handle_rules(
         self,
@@ -285,7 +396,7 @@ class ContentService:
         return [
             _result(
                 chat_id,
-                "rules",
+                game.constants.ViewName.RULES,
                 buzzer_timeout=self._buzzer_timeout,
                 answer_timeout=self._answer_timeout,
             )

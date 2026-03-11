@@ -18,7 +18,7 @@ class Router:
         self, name: str, *, private: bool = False
     ) -> collections.abc.Callable[[Handler], Handler]:
         def decorator(func: Handler) -> Handler:
-            self._commands[(name, private)] = func
+            self._commands[name, private] = func
             return func
 
         return decorator
@@ -43,8 +43,11 @@ class Router:
 
         return decorator
 
+    def has_command(self, name: str, *, private: bool) -> bool:
+        return (name, private) in self._commands
+
     @staticmethod
-    async def _call(handler: Handler, **kwargs: typing.Any) -> list:
+    async def _call(handler: Handler, **kwargs: typing.Any) -> list[typing.Any]:
         result = handler(**kwargs)
         if inspect.isawaitable(result):
             return await result
@@ -56,13 +59,15 @@ class Router:
         *,
         private: bool,
         **kwargs: typing.Any,
-    ) -> list:
+    ) -> list[typing.Any]:
         handler = self._commands.get((name, private))
         if handler is None:
             return []
         return await self._call(handler, **kwargs)
 
-    async def dispatch_callback(self, data: str, **kwargs: typing.Any) -> list:
+    async def dispatch_callback(
+        self, data: str, **kwargs: typing.Any
+    ) -> list[typing.Any]:
         handler = self._callbacks.get(data)
         if handler is not None:
             return await self._call(handler, **kwargs)

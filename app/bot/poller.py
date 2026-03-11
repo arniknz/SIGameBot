@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
+import aiohttp
 import clients.schemas
 import clients.tg
 
@@ -34,8 +35,14 @@ class Poller:
                     logger.debug("Queued update %d", update.update_id)
             except asyncio.CancelledError:
                 raise
+            except (aiohttp.ClientError, OSError) as exc:
+                logger.warning(
+                    "Poller network error, retrying in 5s: %s",
+                    exc,
+                )
+                await asyncio.sleep(5)
             except Exception:
-                logger.exception("Poller error, retrying in 5s")
+                logger.exception("Poller unexpected error, retrying in 5s")
                 await asyncio.sleep(5)
 
     async def start(self) -> None:

@@ -17,6 +17,7 @@ class Config:
     db_password: str = "postgres"
 
     workers_count: int = 3
+    question_selection_timeout: int = 30
     buzzer_timeout: int = 10
     answer_timeout: int = 15
 
@@ -46,6 +47,9 @@ class Config:
             db_user=os.getenv("DB_USER", "postgres"),
             db_password=os.getenv("DB_PASSWORD", "postgres"),
             workers_count=int(os.getenv("WORKERS_COUNT", "3")),
+            question_selection_timeout=int(
+                os.getenv("QUESTION_SELECTION_TIMEOUT", "30")
+            ),
             buzzer_timeout=int(os.getenv("BUZZER_TIMEOUT", "10")),
             answer_timeout=int(os.getenv("ANSWER_TIMEOUT", "15")),
             log_level=os.getenv("LOG_LEVEL", "INFO"),

@@ -1,52 +1,53 @@
 from __future__ import annotations
 
 import asyncio
+import pathlib
 import sys
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "app"))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "app"))
 
-from alembic import context
-from sqlalchemy import pool
-from sqlalchemy.ext.asyncio import create_async_engine
+import alembic.context
+import sqlalchemy.ext.asyncio
+import sqlalchemy.pool
 
-from app.game.models.base import Base
-import app.config
+import config
+import game.models
+from game.models.base import Base
 
-cfg = app.config.Config.from_env()
+cfg = config.Config.from_env()
 target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
-    context.configure(
+    alembic.context.configure(
         url=cfg.db_url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
-    with context.begin_transaction():
-        context.run_migrations()
+    with alembic.context.begin_transaction():
+        alembic.context.run_migrations()
 
 
 def do_run_migrations(connection):
-    context.configure(
+    alembic.context.configure(
         connection=connection,
         target_metadata=target_metadata,
     )
-    with context.begin_transaction():
-        context.run_migrations()
+    with alembic.context.begin_transaction():
+        alembic.context.run_migrations()
 
 
 async def run_migrations_online() -> None:
-    connectable = create_async_engine(
-        cfg.db_url, poolclass=pool.NullPool
+    connectable = sqlalchemy.ext.asyncio.create_async_engine(
+        cfg.db_url, poolclass=sqlalchemy.pool.NullPool
     )
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
     await connectable.dispose()
 
 
-if context.is_offline_mode():
+if alembic.context.is_offline_mode():
     run_migrations_offline()
 else:
     asyncio.run(run_migrations_online())

@@ -5,17 +5,18 @@ import logging
 
 import db.repositories.game
 import db.repositories.participant
+import db.repositories.question
 import db.repositories.user
+import game.constants
 import game.models
 import game.schemas
 import sqlalchemy.ext.asyncio
-import game.constants
 
 logger = logging.getLogger(__name__)
 
 
 def _result(
-    chat_id: int, view: str, **payload: object
+    chat_id: int, view: game.constants.ViewName, **payload: object
 ) -> game.schemas.ServiceResponse:
     return game.schemas.ServiceResponse(
         chat_id=chat_id,
@@ -26,31 +27,57 @@ def _result(
 
 class LobbyService:
     def __init__(
-        self, session_factory: sqlalchemy.ext.asyncio.async_sessionmaker
+        self,
+        session_factory: sqlalchemy.ext.asyncio.async_sessionmaker,
+        question_selection_timeout: int = 30,
     ) -> None:
         self._session_factory = session_factory
+        self._question_selection_timeout = question_selection_timeout
 
     async def handle_start(
         self,
         chat_id: int,
         telegram_id: int,
         username: str,
+        bot_username: str = "",
     ) -> list[game.schemas.ServiceResponse]:
-        async with self._session_factory() as session, session.begin():
-            game_repo = db.repositories.game.GameRepository(session)
-            user_repo = db.repositories.user.UserRepository(session)
-            participant_repo = db.repositories.participant.ParticipantRepository(
+        async with (
+            self._session_factory() as session,
+            session.begin(),
+        ):
+            game_repo = db.repositories.game.GameRepository(
                 session
             )
+            user_repo = db.repositories.user.UserRepository(
+                session
+            )
+            participant_repo = (
+                db.repositories.participant.ParticipantRepository(
+                    session
+                )
+            )
 
-            active_game = await game_repo.get_active_by_chat(chat_id)
+            active_game = await game_repo.get_active_by_chat(
+                chat_id
+            )
             if active_game is not None:
-                return [_result(chat_id, "game_already_running")]
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.GAME_ALREADY_RUNNING,
+                    )
+                ]
 
-            user = await user_repo.get_or_create(telegram_id, username)
-            new_game = await game_repo.create(chat_id, host_id=user.id)
+            user = await user_repo.get_or_create(
+                telegram_id, username
+            )
+            new_game = await game_repo.create(
+                chat_id, host_id=user.id
+            )
             await participant_repo.add(
-                new_game.id, user.id, game.constants.ParticipantRole.PLAYER
+                new_game.id,
+                user.id,
+                game.constants.ParticipantRole.PLAYER,
             )
             await game_repo.create_state(
                 new_game.id, game.constants.GamePhase.LOBBY
@@ -63,7 +90,14 @@ class LobbyService:
                 username,
             )
 
-            return [_result(chat_id, "game_created", username=username)]
+            return [
+                _result(
+                    chat_id,
+                    game.constants.ViewName.GAME_CREATED,
+                    username=username,
+                    bot_username=bot_username,
+                )
+            ]
 
     async def handle_join(
         self,
@@ -74,28 +108,58 @@ class LobbyService:
         async with self._session_factory() as session, session.begin():
             game_repo = db.repositories.game.GameRepository(session)
             user_repo = db.repositories.user.UserRepository(session)
-            participant_repo = db.repositories.participant.ParticipantRepository(
-                session
+            participant_repo = (
+                db.repositories.participant.ParticipantRepository(session)
             )
 
             active_game = await game_repo.get_active_by_chat(chat_id)
             if active_game is None:
-                return [_result(chat_id, "no_active_game")]
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.NO_ACTIVE_GAME,
+                    )
+                ]
 
             if active_game.status != game.constants.GameStatus.WAITING:
-                return [_result(chat_id, "game_already_started")]
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.GAME_ALREADY_STARTED,
+                    )
+                ]
 
             user = await user_repo.get_or_create(telegram_id, username)
             existing = await participant_repo.get_by_telegram_id(
                 active_game.id, telegram_id
             )
             if existing is not None:
-                if existing.is_active:
-                    return [_result(chat_id, "already_in_game", username=username)]
+                if (
+                    existing.is_active
+                    and existing.role == game.constants.ParticipantRole.PLAYER
+                ):
+                    return [
+                        _result(
+                            chat_id,
+                            game.constants.ViewName.ALREADY_IN_GAME,
+                            username=username,
+                        )
+                    ]
                 existing.is_active = True
                 existing.role = game.constants.ParticipantRole.PLAYER
-                logger.info("%s rejoined game %s", username, active_game.id)
-                return [_result(chat_id, "player_rejoined", username=username)]
+                existing.score = 0
+                logger.info(
+                    "%s rejoined game %s (score reset)",
+                    username,
+                    active_game.id,
+                )
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAYER_REJOINED,
+                        username=username,
+                    )
+                ]
 
             await participant_repo.add(
                 active_game.id,
@@ -111,7 +175,7 @@ class LobbyService:
             return [
                 _result(
                     chat_id,
-                    "player_joined",
+                    game.constants.ViewName.PLAYER_JOINED,
                     username=username,
                     player_names=player_names,
                 )
@@ -126,13 +190,18 @@ class LobbyService:
         async with self._session_factory() as session, session.begin():
             game_repo = db.repositories.game.GameRepository(session)
             user_repo = db.repositories.user.UserRepository(session)
-            participant_repo = db.repositories.participant.ParticipantRepository(
-                session
+            participant_repo = (
+                db.repositories.participant.ParticipantRepository(session)
             )
 
             active_game = await game_repo.get_active_by_chat(chat_id)
             if active_game is None:
-                return [_result(chat_id, "no_active_game")]
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.NO_ACTIVE_GAME,
+                    )
+                ]
 
             user = await user_repo.get_or_create(telegram_id, username)
             existing = await participant_repo.get_by_telegram_id(
@@ -144,11 +213,21 @@ class LobbyService:
                     and existing.is_active
                 ):
                     return [
-                        _result(chat_id, "already_spectating", username=username)
+                        _result(
+                            chat_id,
+                            game.constants.ViewName.ALREADY_SPECTATING,
+                            username=username,
+                        )
                     ]
                 existing.role = game.constants.ParticipantRole.SPECTATOR
                 existing.is_active = True
-                return [_result(chat_id, "now_spectating", username=username)]
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.NOW_SPECTATING,
+                        username=username,
+                    )
+                ]
 
             await participant_repo.add(
                 active_game.id,
@@ -158,7 +237,13 @@ class LobbyService:
 
             logger.info("%s spectating game %s", username, active_game.id)
 
-            return [_result(chat_id, "now_spectating", username=username)]
+            return [
+                _result(
+                    chat_id,
+                    game.constants.ViewName.NOW_SPECTATING,
+                    username=username,
+                )
+            ]
 
     async def handle_leave(
         self,
@@ -168,55 +253,55 @@ class LobbyService:
     ) -> list[game.schemas.ServiceResponse]:
         async with self._session_factory() as session, session.begin():
             game_repo = db.repositories.game.GameRepository(session)
-            participant_repo = db.repositories.participant.ParticipantRepository(
-                session
+            participant_repo = (
+                db.repositories.participant.ParticipantRepository(session)
             )
 
             active_game = await game_repo.get_active_by_chat(chat_id)
             if active_game is None:
-                return [_result(chat_id, "no_active_game_here")]
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.NO_ACTIVE_GAME_HERE,
+                    )
+                ]
 
             participant = await participant_repo.get_by_telegram_id(
                 active_game.id,
                 telegram_id,
             )
             if participant is None or not participant.is_active:
-                return [_result(chat_id, "not_in_game", username=username)]
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.NOT_IN_GAME,
+                        username=username,
+                    )
+                ]
 
             user_repo = db.repositories.user.UserRepository(session)
             user = await user_repo.get_by_telegram_id(telegram_id)
 
             if active_game.status == game.constants.GameStatus.ACTIVE:
-                participant.is_active = False
-                responses: list[game.schemas.ServiceResponse] = [
-                    _result(chat_id, "left_game", username=username),
-                ]
-                remaining_players = await participant_repo.get_active_players(
-                    active_game.id
+                return await self._leave_active_game(
+                    session,
+                    game_repo,
+                    participant_repo,
+                    user_repo,
+                    active_game,
+                    participant,
+                    user,
+                    chat_id,
+                    username,
                 )
-                if len(remaining_players) < 2:
-                    finish_responses = await self._finish_game(
-                        session,
-                        active_game,
-                        chat_id,
-                        stopped=True,
-                    )
-                    responses.extend(finish_responses)
-                elif active_game.current_player_id == participant.id:
-                    next_player = await participant_repo.pick_random(
-                        active_game.id
-                    )
-                    if next_player is not None:
-                        active_game.current_player_id = next_player.id
-                return responses
 
             if user and user.id == active_game.host_id:
                 participant.is_active = False
-                remaining_players = await participant_repo.get_active_players(
+                remaining = await participant_repo.get_active_players(
                     active_game.id,
                 )
-                if remaining_players:
-                    new_host = remaining_players[0]
+                if remaining:
+                    new_host = remaining[0]
                     active_game.host_id = new_host.user_id
                     new_host_user = await user_repo.get_by_id(new_host.user_id)
                     new_host_name = (
@@ -230,7 +315,7 @@ class LobbyService:
                     return [
                         _result(
                             chat_id,
-                            "host_transferred",
+                            game.constants.ViewName.HOST_TRANSFERRED,
                             old_host=username,
                             new_host=new_host_name,
                         ),
@@ -238,12 +323,199 @@ class LobbyService:
                 active_game.status = game.constants.GameStatus.FINISHED
                 active_game.finished_at = datetime.datetime.now(datetime.UTC)
                 return [
-                    _result(chat_id, "plain", text="No players remain - game ended."),
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.GAME_ENDED_NO_PLAYERS,
+                    ),
                 ]
 
             participant.is_active = False
             logger.info("%s left game %s", username, active_game.id)
-            return [_result(chat_id, "left_game", username=username)]
+            return [
+                _result(
+                    chat_id,
+                    game.constants.ViewName.LEFT_GAME,
+                    username=username,
+                )
+            ]
+
+    async def _leave_active_game(
+        self,
+        session: sqlalchemy.ext.asyncio.AsyncSession,
+        game_repo: db.repositories.game.GameRepository,
+        participant_repo: db.repositories.participant.ParticipantRepository,
+        user_repo: db.repositories.user.UserRepository,
+        active_game: game.models.GameModel,
+        participant: game.models.ParticipantModel,
+        user: game.models.UserModel | None,
+        chat_id: int,
+        username: str,
+    ) -> list[game.schemas.ServiceResponse]:
+        participant.is_active = False
+
+        game_state = await game_repo.get_state_for_update(
+            active_game.id
+        )
+
+        if (
+            game_state is not None
+            and game_state.buzzer_pressed_by == participant.id
+        ):
+            game_state.buzzer_pressed_by = None
+            game_state.buzzer_pressed_at = None
+            if (
+                game_state.status
+                == game.constants.GamePhase.WAITING_ANSWER
+            ):
+                game_state.timer_ends_at = None
+
+        responses: list[game.schemas.ServiceResponse] = [
+            _result(
+                chat_id,
+                game.constants.ViewName.LEFT_GAME,
+                username=username,
+            ),
+        ]
+
+        remaining = (
+            await participant_repo.get_active_players(
+                active_game.id
+            )
+        )
+        if len(remaining) < 2:
+            finish_responses = await self._finish_game(
+                session,
+                active_game,
+                chat_id,
+                stopped=True,
+            )
+            responses.extend(finish_responses)
+            return responses
+
+        if active_game.current_player_id == participant.id:
+            mid_turn = await self._handle_mid_turn_leave(
+                session,
+                game_repo,
+                participant_repo,
+                active_game,
+                game_state,
+                chat_id,
+                username,
+            )
+            responses.extend(mid_turn)
+
+        if (
+            user
+            and user.id == active_game.host_id
+            and remaining
+        ):
+            new_host = remaining[0]
+            active_game.host_id = new_host.user_id
+            new_host_user = await user_repo.get_by_id(
+                new_host.user_id
+            )
+            new_host_name = (
+                new_host_user.username
+                if new_host_user
+                else "Unknown"
+            )
+            responses.append(
+                _result(
+                    chat_id,
+                    game.constants.ViewName.HOST_TRANSFERRED,
+                    old_host=username,
+                    new_host=new_host_name,
+                )
+            )
+
+        return responses
+
+    async def _handle_mid_turn_leave(
+        self,
+        session: sqlalchemy.ext.asyncio.AsyncSession,
+        game_repo: db.repositories.game.GameRepository,
+        participant_repo: db.repositories.participant.ParticipantRepository,
+        active_game: game.models.GameModel,
+        game_state: game.models.GameStateModel | None,
+        chat_id: int,
+        username: str,
+    ) -> list[game.schemas.ServiceResponse]:
+        next_player = await participant_repo.pick_random(
+            active_game.id
+        )
+        if next_player is not None:
+            active_game.current_player_id = next_player.id
+
+        if game_state is None or game_state.status not in (
+            game.constants.GamePhase.WAITING_BUZZER,
+            game.constants.GamePhase.WAITING_ANSWER,
+        ):
+            return []
+
+        question_repo = (
+            db.repositories.question.QuestionRepository(session)
+        )
+        await self._burn_current_question(
+            question_repo, game_state
+        )
+
+        now = datetime.datetime.now(datetime.UTC)
+        game_state.status = (
+            game.constants.GamePhase.CHOOSING_QUESTION
+        )
+        game_state.current_question_id = None
+        game_state.buzzer_pressed_by = None
+        game_state.buzzer_pressed_at = None
+        game_state.timer_ends_at = now + datetime.timedelta(
+            seconds=self._question_selection_timeout,
+        )
+
+        pending_board = await question_repo.get_pending_board(
+            active_game.id
+        )
+        if not pending_board:
+            return await self._finish_game(
+                session, active_game, chat_id
+            )
+
+        next_name = await game_repo.current_player_username(
+            active_game
+        )
+        return [
+            _result(
+                chat_id,
+                game.constants.ViewName.BOARD,
+                intro=f"🔄 {username} left mid-turn.",
+                current_player=next_name,
+                rows=pending_board,
+            )
+        ]
+
+    @staticmethod
+    async def _burn_current_question(
+        question_repo: db.repositories.question.QuestionRepository,
+        game_state: game.models.GameStateModel,
+    ) -> None:
+        if game_state.current_question_id is None:
+            return
+        detail = (
+            await question_repo.get_question_in_game_detail(
+                game_state.current_question_id,
+            )
+        )
+        if detail is None:
+            return
+        question_in_game = detail[0]
+        if (
+            question_in_game.status
+            != game.constants.QuestionInGameStatus.ANSWERED
+        ):
+            question_in_game.status = (
+                game.constants.QuestionInGameStatus.ANSWERED
+            )
+            question_in_game.answered_at = (
+                datetime.datetime.now(datetime.UTC)
+            )
 
     async def handle_stop(
         self,
@@ -256,11 +528,21 @@ class LobbyService:
 
             active_game = await game_repo.get_active_by_chat(chat_id)
             if active_game is None:
-                return [_result(chat_id, "no_active_game_here")]
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.NO_ACTIVE_GAME_HERE,
+                    )
+                ]
 
             user = await user_repo.get_by_telegram_id(telegram_id)
             if user is None or user.id != active_game.host_id:
-                return [_result(chat_id, "only_host")]
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.ONLY_HOST,
+                    )
+                ]
 
             return await self._finish_game(
                 session, active_game, chat_id, stopped=True
@@ -281,18 +563,28 @@ class LobbyService:
         game_state = await game_repo.get_state(active_game.id)
         if game_state:
             game_state.status = game.constants.GamePhase.FINISHED
+            game_state.timer_ends_at = None
 
-        scoreboard_data = await game_repo.scoreboard(active_game.id)
+        scoreboard_data = await game_repo.scoreboard(
+            active_game.id, active_only=False
+        )
 
-        logger.info("Game %s finished (stopped=%s)", active_game.id, stopped)
+        logger.info(
+            "Game %s finished (stopped=%s)",
+            active_game.id,
+            stopped,
+        )
 
+        title = (
+            "⛔ Game stopped by host.\n\n🏆 Final scores:"
+            if stopped
+            else "🏁 Game over!\n\n🏆 Final scores:"
+        )
         return [
             _result(
                 chat_id,
-                "scoreboard",
-                title="Game stopped by host.\n\nFinal scores:"
-                if stopped
-                else "🏁 Game over!\n\nFinal scores:",
+                game.constants.ViewName.SCOREBOARD,
+                title=title,
                 scores=scoreboard_data,
                 with_controls=False,
             )

@@ -8,17 +8,17 @@ import db.repositories.game
 import db.repositories.participant
 import db.repositories.question
 import db.repositories.user
+import game.constants
 import game.models
 import game.schemas
 import sqlalchemy
 import sqlalchemy.ext.asyncio
-import game.constants
-4
+
 logger = logging.getLogger(__name__)
 
 
 def _result(
-    chat_id: int, view: str, **payload: object
+    chat_id: int, view: game.constants.ViewName, **payload: object
 ) -> game.schemas.ServiceResponse:
     return game.schemas.ServiceResponse(
         chat_id=chat_id,
@@ -31,10 +31,12 @@ class GameplayService:
     def __init__(
         self,
         session_factory: sqlalchemy.ext.asyncio.async_sessionmaker,
+        question_selection_timeout: int,
         buzzer_timeout: int,
         answer_timeout: int,
     ) -> None:
         self._session_factory = session_factory
+        self._question_selection_timeout = question_selection_timeout
         self._buzzer_timeout = buzzer_timeout
         self._answer_timeout = answer_timeout
 
@@ -44,50 +46,82 @@ class GameplayService:
         telegram_id: int,
     ) -> list[game.schemas.ServiceResponse]:
         async with self._session_factory() as session, session.begin():
-            game_repo = db.repositories.game.GameRepository(session)
-            user_repo = db.repositories.user.UserRepository(session)
-            participant_repo = db.repositories.participant.ParticipantRepository(
+            game_repo = db.repositories.game.GameRepository(
                 session
             )
-            question_repo = db.repositories.question.QuestionRepository(session)
-
-            active_game = await game_repo.get_active_by_chat(chat_id)
-            if active_game is None:
-                return [_result(chat_id, "no_active_game")]
-
-            if active_game.status != game.constants.GameStatus.WAITING:
-                return [_result(chat_id, "game_in_progress")]
-
-            user = await user_repo.get_by_telegram_id(telegram_id)
-            if user is None or user.id != active_game.host_id:
-                return [_result(chat_id, "only_host")]
-
-            active_players = await participant_repo.get_active_players(
-                active_game.id
+            user_repo = db.repositories.user.UserRepository(
+                session
             )
-            if len(active_players) < 2:
-                return [_result(chat_id, "need_two_players")]
+            participant_repo = (
+                db.repositories.participant.ParticipantRepository(
+                    session
+                )
+            )
+            question_repo = (
+                db.repositories.question.QuestionRepository(
+                    session
+                )
+            )
 
-            all_question_ids = await question_repo.all_question_ids()
-            if not all_question_ids:
-                return [_result(chat_id, "no_questions")]
+            error = await self._validate_start(
+                game_repo,
+                user_repo,
+                participant_repo,
+                question_repo,
+                chat_id,
+                telegram_id,
+            )
+            if error is not None:
+                return error
+
+            active_game = await game_repo.get_active_by_chat(
+                chat_id
+            )
+            assert active_game is not None
+            all_question_ids = (
+                await question_repo.all_question_ids()
+            )
 
             await question_repo.bulk_create_questions_in_game(
                 active_game.id,
                 all_question_ids,
             )
 
-            first_player = await participant_repo.pick_random(active_game.id)
-            active_game.status = game.constants.GameStatus.ACTIVE
+            first_player = (
+                await participant_repo.pick_random(
+                    active_game.id
+                )
+            )
+            if first_player is None:
+                return []
+            active_game.status = (
+                game.constants.GameStatus.ACTIVE
+            )
             active_game.current_player_id = first_player.id
 
-            game_state = await game_repo.get_state(active_game.id)
-            game_state.status = game.constants.GamePhase.CHOOSING_QUESTION
-
-            first_player_name = await game_repo.current_player_username(
-                active_game
+            game_state = await game_repo.get_state(
+                active_game.id
             )
-            pending_board = await question_repo.get_pending_board(active_game.id)
+            if game_state is None:
+                return []
+            now = datetime.datetime.now(datetime.UTC)
+            game_state.status = (
+                game.constants.GamePhase.CHOOSING_QUESTION
+            )
+            game_state.timer_ends_at = now + datetime.timedelta(
+                seconds=self._question_selection_timeout,
+            )
+
+            first_player_name = (
+                await game_repo.current_player_username(
+                    active_game
+                )
+            )
+            pending_board = (
+                await question_repo.get_pending_board(
+                    active_game.id
+                )
+            )
 
             logger.info(
                 "Game %s started in chat %s, first player: %s",
@@ -99,12 +133,81 @@ class GameplayService:
             return [
                 _result(
                     chat_id,
-                    "board",
-                    intro="🎯 Game started!",
+                    game.constants.ViewName.BOARD,
+                    intro="🎯 Game started! Let's go!",
                     current_player=first_player_name,
                     rows=pending_board,
+                    selection_timeout=(
+                        self._question_selection_timeout
+                    ),
                 )
             ]
+
+    @staticmethod
+    async def _validate_start(
+        game_repo: db.repositories.game.GameRepository,
+        user_repo: db.repositories.user.UserRepository,
+        participant_repo: db.repositories.participant.ParticipantRepository,
+        question_repo: db.repositories.question.QuestionRepository,
+        chat_id: int,
+        telegram_id: int,
+    ) -> list[game.schemas.ServiceResponse] | None:
+        active_game = await game_repo.get_active_by_chat(
+            chat_id
+        )
+        if active_game is None:
+            return [
+                _result(
+                    chat_id,
+                    game.constants.ViewName.NO_ACTIVE_GAME,
+                )
+            ]
+
+        if (
+            active_game.status
+            != game.constants.GameStatus.WAITING
+        ):
+            return [
+                _result(
+                    chat_id,
+                    game.constants.ViewName.GAME_IN_PROGRESS,
+                )
+            ]
+
+        user = await user_repo.get_by_telegram_id(telegram_id)
+        if user is None or user.id != active_game.host_id:
+            return [
+                _result(
+                    chat_id,
+                    game.constants.ViewName.ONLY_HOST,
+                )
+            ]
+
+        active_players = (
+            await participant_repo.get_active_players(
+                active_game.id
+            )
+        )
+        if len(active_players) < 2:
+            return [
+                _result(
+                    chat_id,
+                    game.constants.ViewName.NEED_TWO_PLAYERS,
+                )
+            ]
+
+        all_question_ids = (
+            await question_repo.all_question_ids()
+        )
+        if not all_question_ids:
+            return [
+                _result(
+                    chat_id,
+                    game.constants.ViewName.NO_QUESTIONS,
+                )
+            ]
+
+        return None
 
     async def handle_buzzer(
         self,
@@ -114,8 +217,8 @@ class GameplayService:
     ) -> list[game.schemas.ServiceResponse]:
         async with self._session_factory() as session, session.begin():
             game_repo = db.repositories.game.GameRepository(session)
-            participant_repo = db.repositories.participant.ParticipantRepository(
-                session
+            participant_repo = (
+                db.repositories.participant.ParticipantRepository(session)
             )
 
             active_game = await game_repo.get_active_by_chat(chat_id)
@@ -136,16 +239,10 @@ class GameplayService:
             ):
                 return []
 
-            statement = (
-                sqlalchemy.select(game.models.GameStateModel)
-                .where(game.models.GameStateModel.game_id == active_game.id)
-                .with_for_update()
-            )
-            game_state = (await session.execute(statement)).scalar_one_or_none()
+            game_state = await game_repo.get_state_for_update(active_game.id)
             if (
                 game_state is None
-                or game_state.status
-                != game.constants.GamePhase.WAITING_BUZZER
+                or game_state.status != game.constants.GamePhase.WAITING_BUZZER
             ):
                 return []
 
@@ -169,7 +266,7 @@ class GameplayService:
             return [
                 _result(
                     chat_id,
-                    "buzzer_pressed",
+                    game.constants.ViewName.BUZZER_PRESSED,
                     username=username,
                     answer_timeout=self._answer_timeout,
                 )
@@ -183,8 +280,8 @@ class GameplayService:
     ) -> list[game.schemas.ServiceResponse]:
         async with self._session_factory() as session, session.begin():
             game_repo = db.repositories.game.GameRepository(session)
-            participant_repo = db.repositories.participant.ParticipantRepository(
-                session
+            participant_repo = (
+                db.repositories.participant.ParticipantRepository(session)
             )
             question_repo = db.repositories.question.QuestionRepository(session)
 
@@ -195,7 +292,7 @@ class GameplayService:
             ):
                 return []
 
-            game_state = await game_repo.get_state(active_game.id)
+            game_state = await game_repo.get_state_for_update(active_game.id)
             if (
                 game_state is None
                 or game_state.status
@@ -211,7 +308,12 @@ class GameplayService:
                 participant is None
                 or participant.id != active_game.current_player_id
             ):
-                return [_result(chat_id, "not_your_turn")]
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.NOT_YOUR_TURN,
+                    )
+                ]
 
             validation = await self._validate_question_selection(
                 question_repo,
@@ -219,7 +321,13 @@ class GameplayService:
                 question_in_game_id_str,
             )
             if isinstance(validation, str):
-                return [_result(chat_id, "plain", text=validation)]
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text=validation,
+                    )
+                ]
             detail = validation
             (
                 question_in_game,
@@ -241,6 +349,7 @@ class GameplayService:
             game_state.timer_ends_at = now + datetime.timedelta(
                 seconds=self._buzzer_timeout,
             )
+            game_state.updated_at = now
 
             logger.info(
                 "Question selected: [%s] %s (%d pts) in game %s",
@@ -253,7 +362,7 @@ class GameplayService:
             return [
                 _result(
                     chat_id,
-                    "question_asked",
+                    game.constants.ViewName.QUESTION_ASKED,
                     topic=topic_title,
                     cost=cost,
                     text=question_text,
@@ -266,7 +375,18 @@ class GameplayService:
         question_repo: db.repositories.question.QuestionRepository,
         active_game: game.models.GameModel,
         question_in_game_id_str: str,
-    ) -> str | tuple:
+    ) -> (
+        str
+        | sqlalchemy.Row[
+            tuple[
+                game.models.QuestionInGameModel,
+                str,
+                str,
+                str,
+                int,
+            ]
+        ]
+    ):
         try:
             question_in_game_id = uuid.UUID(question_in_game_id_str)
         except ValueError:
@@ -299,8 +419,8 @@ class GameplayService:
     ) -> list[game.schemas.ServiceResponse]:
         async with self._session_factory() as session, session.begin():
             game_repo = db.repositories.game.GameRepository(session)
-            participant_repo = db.repositories.participant.ParticipantRepository(
-                session
+            participant_repo = (
+                db.repositories.participant.ParticipantRepository(session)
             )
 
             active_game = await game_repo.get_active_by_chat(chat_id)
@@ -310,7 +430,7 @@ class GameplayService:
             ):
                 return []
 
-            game_state = await game_repo.get_state(active_game.id)
+            game_state = await game_repo.get_state_for_update(active_game.id)
             if (
                 game_state is None
                 or game_state.status != game.constants.GamePhase.WAITING_ANSWER
@@ -345,16 +465,27 @@ class GameplayService:
 
             active_game = await game_repo.get_active_by_chat(chat_id)
             if active_game is None:
-                return [_result(chat_id, "no_active_game_here")]
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.NO_ACTIVE_GAME_HERE,
+                    )
+                ]
 
             scoreboard_data = await game_repo.scoreboard(active_game.id)
             if not scoreboard_data:
-                return [_result(chat_id, "plain", text="No players yet.")]
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="No players yet.",
+                    )
+                ]
 
             return [
                 _result(
                     chat_id,
-                    "scoreboard",
+                    game.constants.ViewName.SCOREBOARD,
                     title="📊 Current scores:\n",
                     scores=scoreboard_data,
                     with_controls=True,
@@ -373,15 +504,33 @@ class GameplayService:
         question_repo = db.repositories.question.QuestionRepository(session)
         chat_id = active_game.chat_id
 
+        if game_state.current_question_id is None:
+            return [
+                _result(
+                    chat_id,
+                    game.constants.ViewName.PLAIN,
+                    text="Question data not found.",
+                )
+            ]
         detail = await question_repo.get_question_in_game_detail(
             game_state.current_question_id,
         )
         if detail is None:
-            return [_result(chat_id, "plain", text="Question data not found.")]
+            return [
+                _result(
+                    chat_id,
+                    game.constants.ViewName.PLAIN,
+                    text="Question data not found.",
+                )
+            ]
 
-        question_in_game, _topic_title, _question_text, correct_answer, cost = (
-            detail
-        )
+        (
+            question_in_game,
+            _topic_title,
+            _question_text,
+            correct_answer,
+            cost,
+        ) = detail
 
         now = datetime.datetime.now(datetime.UTC)
         is_correct = (
@@ -390,19 +539,18 @@ class GameplayService:
 
         responses: list[game.schemas.ServiceResponse] = []
 
+        question_in_game.status = game.constants.QuestionInGameStatus.ANSWERED
+        question_in_game.answered_by = buzzer_participant.id
+        question_in_game.answered_at = now
+        game_state.timer_ends_at = None
+
         if is_correct:
             buzzer_participant.score += cost
-            question_in_game.status = (
-                game.constants.QuestionInGameStatus.ANSWERED
-            )
-            question_in_game.answered_by = buzzer_participant.id
-            question_in_game.answered_at = now
             active_game.current_player_id = buzzer_participant.id
-            game_state.timer_ends_at = None
             responses.append(
                 _result(
                     chat_id,
-                    "answer_correct",
+                    game.constants.ViewName.ANSWER_CORRECT,
                     username=username,
                     cost=cost,
                     correct_answer=correct_answer,
@@ -410,16 +558,10 @@ class GameplayService:
             )
         else:
             buzzer_participant.score -= cost
-            question_in_game.status = (
-                game.constants.QuestionInGameStatus.ANSWERED
-            )
-            question_in_game.answered_by = buzzer_participant.id
-            question_in_game.answered_at = now
-            game_state.timer_ends_at = None
             responses.append(
                 _result(
                     chat_id,
-                    "answer_wrong",
+                    game.constants.ViewName.ANSWER_WRONG,
                     username=username,
                     cost=cost,
                     correct_answer=correct_answer,
@@ -449,10 +591,14 @@ class GameplayService:
         if not pending_board:
             return await self._finish_game(session, active_game, chat_id)
 
+        now = datetime.datetime.now(datetime.UTC)
         game_state.status = game.constants.GamePhase.CHOOSING_QUESTION
         game_state.current_question_id = None
         game_state.buzzer_pressed_by = None
         game_state.buzzer_pressed_at = None
+        game_state.timer_ends_at = now + datetime.timedelta(
+            seconds=self._question_selection_timeout,
+        )
 
         current_player_name = await game_repo.current_player_username(
             active_game
@@ -460,10 +606,11 @@ class GameplayService:
         return [
             _result(
                 chat_id,
-                "board",
+                game.constants.ViewName.BOARD,
                 intro="",
                 current_player=current_player_name,
                 rows=pending_board,
+                selection_timeout=(self._question_selection_timeout),
             )
         ]
 
@@ -482,18 +629,24 @@ class GameplayService:
         game_state = await game_repo.get_state(active_game.id)
         if game_state:
             game_state.status = game.constants.GamePhase.FINISHED
+            game_state.timer_ends_at = None
 
-        scoreboard_data = await game_repo.scoreboard(active_game.id)
+        scoreboard_data = await game_repo.scoreboard(
+            active_game.id, active_only=False
+        )
 
         logger.info("Game %s finished (stopped=%s)", active_game.id, stopped)
 
+        title = (
+            "⛔ Game stopped by host.\n\n🏆 Final scores:"
+            if stopped
+            else "🏁 Game over!\n\n🏆 Final scores:"
+        )
         return [
             _result(
                 chat_id,
-                "scoreboard",
-                title="Game stopped by host.\n\nFinal scores:"
-                if stopped
-                else "🏁 Game over!\n\nFinal scores:",
+                game.constants.ViewName.SCOREBOARD,
+                title=title,
                 scores=scoreboard_data,
                 with_controls=False,
             )
