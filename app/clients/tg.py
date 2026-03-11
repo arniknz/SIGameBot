@@ -21,6 +21,11 @@ class TgClient:
             self._session = aiohttp.ClientSession()
         return self._session
 
+    async def start(self) -> None:
+        if self._session is None or self._session.closed:
+            connector = aiohttp.TCPConnector(limit=100, ttl_dns_cache=300)
+            self._session = aiohttp.ClientSession(connector=connector)
+
     def _url(self, method: str) -> str:
         return API_BASE.format(token=self._token, method=method)
 

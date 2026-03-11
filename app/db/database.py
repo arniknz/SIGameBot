@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 import config
+import sqlalchemy
 import sqlalchemy.ext.asyncio
 
 logger = logging.getLogger(__name__)
@@ -15,6 +16,8 @@ class Database:
             echo=False,
             pool_size=5,
             max_overflow=10,
+            pool_pre_ping=True,
+            pool_recycle=1800,
             connect_args={"ssl": False},
         )
         self._session_factory = sqlalchemy.ext.asyncio.async_sessionmaker(

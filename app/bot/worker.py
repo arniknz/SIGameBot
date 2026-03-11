@@ -3,11 +3,8 @@ from __future__ import annotations
 import asyncio
 import logging
 
-import bot.handlers
+import bot.dispatcher
 import clients.schemas
-import clients.tg
-import game.logic
-import game.schemas
 
 logger = logging.getLogger(__name__)
 
@@ -15,17 +12,13 @@ logger = logging.getLogger(__name__)
 class Worker:
     def __init__(
         self,
-        handlers: bot.handlers.Handlers,
+        dispatcher: bot.dispatcher.Dispatcher,
         queue: asyncio.Queue[clients.schemas.Update],
         worker_id: int,
-        tg: clients.tg.TgClient,
-        logic: game.logic.GameLogic,
     ):
-        self._handlers = handlers
+        self._dispatcher = dispatcher
         self._queue = queue
         self._id = worker_id
-        self._tg = tg
-        self._logic = logic
         self._running = False
         self._processing = False
         self._task: asyncio.Task | None = None
@@ -40,46 +33,22 @@ class Worker:
             try:
                 update = await asyncio.wait_for(self._queue.get(), timeout=1.0)
             except TimeoutError:
-                await self._check_timers()
                 continue
             except asyncio.CancelledError:
                 break
 
             self._processing = True
             try:
-                await self._handlers.handle_update(update)
+                await self._dispatcher.handle_update(update)
             except asyncio.CancelledError:
                 break
             except Exception:
                 logger.exception("Worker-%d error handling update", self._id)
             finally:
                 self._processing = False
+                self._queue.task_done()
 
         logger.info("Worker-%d loop exited", self._id)
-
-    async def _check_timers(self) -> None:
-        try:
-            responses = await self._logic.check_timers()
-        except Exception:
-            logger.exception("Worker-%d error checking timers", self._id)
-            return
-        await self._send_timer_responses(responses)
-
-    async def _send_timer_responses(
-        self, responses: list[game.schemas.GameResponse]
-    ) -> None:
-        for resp in responses:
-            try:
-                if resp.keyboard:
-                    await self._tg.send_keyboard(
-                        resp.chat_id, resp.text, resp.keyboard
-                    )
-                else:
-                    await self._tg.send_message(resp.chat_id, resp.text)
-            except Exception:
-                logger.exception(
-                    "Worker-%d error sending timer response", self._id
-                )
 
     async def start(self) -> None:
         self._running = True
@@ -93,7 +62,8 @@ class Worker:
                 await asyncio.wait_for(self._task, timeout=5.0)
             except TimeoutError:
                 logger.warning(
-                    "Worker-%d did not finish in time, cancelling", self._id
+                    "Worker-%d did not finish in time, cancelling",
+                    self._id,
                 )
                 self._task.cancel()
                 try:

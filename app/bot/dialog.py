@@ -2,15 +2,10 @@ from __future__ import annotations
 
 import logging
 
+import game.constants
 import game.schemas
 
 logger = logging.getLogger(__name__)
-
-STEP_IDLE = "idle"
-STEP_AWAIT_TOPIC_NAME = "await_topic_name"
-STEP_AWAIT_QUESTION_TEXT = "await_question_text"
-STEP_AWAIT_QUESTION_ANSWER = "await_question_answer"
-STEP_AWAIT_QUESTION_COST = "await_question_cost"
 
 
 class DialogManager:
@@ -22,7 +17,7 @@ class DialogManager:
 
     def start_add_topic(self, telegram_id: int, game_chat_id: int) -> None:
         self._states[telegram_id] = game.schemas.DialogState(
-            step=STEP_AWAIT_TOPIC_NAME,
+            step=game.constants.DialogStep.AWAIT_TOPIC_NAME,
             game_chat_id=game_chat_id,
         )
         logger.debug(
@@ -35,7 +30,7 @@ class DialogManager:
         self, telegram_id: int, game_chat_id: int, topic_id: str
     ) -> None:
         self._states[telegram_id] = game.schemas.DialogState(
-            step=STEP_AWAIT_QUESTION_TEXT,
+            step=game.constants.DialogStep.AWAIT_QUESTION_TEXT,
             game_chat_id=game_chat_id,
             topic_id=topic_id,
         )
@@ -45,7 +40,9 @@ class DialogManager:
             topic_id,
         )
 
-    def advance(self, telegram_id: int, step: str) -> None:
+    def advance(
+        self, telegram_id: int, step: game.constants.DialogStep
+    ) -> None:
         state = self._states.get(telegram_id)
         if state:
             state.step = step
@@ -55,4 +52,6 @@ class DialogManager:
 
     def has_active(self, telegram_id: int) -> bool:
         state = self._states.get(telegram_id)
-        return state is not None and state.step != STEP_IDLE
+        return (
+            state is not None and state.step != game.constants.DialogStep.IDLE
+        )

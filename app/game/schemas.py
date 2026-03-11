@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import dataclasses
+import typing
+
+import game.constants
 
 
 @dataclasses.dataclass
@@ -11,8 +14,15 @@ class GameResponse:
 
 
 @dataclasses.dataclass
+class ServiceResponse:
+    chat_id: int
+    view: str
+    payload: dict[str, typing.Any] = dataclasses.field(default_factory=dict)
+
+
+@dataclasses.dataclass
 class DialogState:
-    step: str
+    step: game.constants.DialogStep
     game_chat_id: int = 0
     topic_name: str = ""
     topic_id: str = ""
