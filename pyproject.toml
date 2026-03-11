@@ -84,9 +84,7 @@ extend-select = [
     "RUF",      # https://docs.astral.sh/ruff/rules/#ruff-specific-rules-ruf
     "SIM",      # https://docs.astral.sh/ruff/rules/#flake8-simplify-sim
     "T20",      # https://docs.astral.sh/ruff/rules/#flake8-print-t20
-    "TRIO",     # https://docs.astral.sh/ruff/rules/#flake8-trio-trio
     "TRY300",   # https://docs.astral.sh/ruff/rules/try-consider-else
-    "TRY302",   # https://docs.astral.sh/ruff/rules/useless-try-except
     "TRY401",   # https://docs.astral.sh/ruff/rules/verbose-log-message
     "UP",       # https://docs.astral.sh/ruff/rules/#pyupgrade-up
     "YTT",      # https://docs.astral.sh/ruff/rules/#flake8-2020-ytt
@@ -110,10 +108,6 @@ extend-ignore = [
     "PLR0913",  # https://docs.astral.sh/ruff/rules/too-many-arguments – может оказаться слишком жестко для ребят
     "PLR1714",  # https://docs.astral.sh/ruff/rules/repeated-equality-comparison – бывают неадекватные срабатывания
     "PERF203",  # https://docs.astral.sh/ruff/rules/try-except-in-loop – я бы включил, но сами таким грешим, не думаю, что крит
-
-    # нигде не придерживались такого подхода
-    "PT004",    # https://docs.astral.sh/ruff/rules/pytest-missing-fixture-name-underscore
-    "PT005",    # https://docs.astral.sh/ruff/rules/pytest-incorrect-fixture-name-underscore
 
     "PT007",    # https://docs.astral.sh/ruff/rules/pytest-parametrize-values-wrong-type – не считаю критичным
 

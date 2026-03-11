@@ -178,3 +178,5 @@ pyrightconfig.json
 
 .idea
 *.code-workspace
+*.cursorrules
+logs/
