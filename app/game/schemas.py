@@ -3,26 +3,26 @@ from __future__ import annotations
 import dataclasses
 import typing
 
-import game.constants
+from game.constants import DialogStep, ViewName
 
 
 @dataclasses.dataclass
 class GameResponse:
     chat_id: int
     text: str
-    keyboard: list[list[dict]] | None = None
+    keyboard: list[list[dict[str, str]]] | None = None
 
 
 @dataclasses.dataclass
 class ServiceResponse:
     chat_id: int
-    view: str
+    view: ViewName
     payload: dict[str, typing.Any] = dataclasses.field(default_factory=dict)
 
 
 @dataclasses.dataclass
 class DialogState:
-    step: game.constants.DialogStep
+    step: DialogStep
     game_chat_id: int = 0
     topic_name: str = ""
     topic_id: str = ""

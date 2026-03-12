@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
+import aiohttp
 import bot.dialog
 import bot.dispatcher
 import bot.handlers
@@ -13,9 +14,13 @@ import clients.schemas
 import clients.tg
 import config
 import db.database
+import game.schemas
 import game.services
 
 logger = logging.getLogger(__name__)
+
+QUEUE_DRAIN_TIMEOUT = 15
+WORKER_STOP_TIMEOUT = 10
 
 
 class Bot:
@@ -27,9 +32,13 @@ class Bot:
 
         session_factory = self._db.session_factory
 
-        self._lobby = game.services.LobbyService(session_factory)
+        self._lobby = game.services.LobbyService(
+            session_factory,
+            question_selection_timeout=cfg.question_selection_timeout,
+        )
         self._gameplay = game.services.GameplayService(
             session_factory,
+            question_selection_timeout=cfg.question_selection_timeout,
             buzzer_timeout=cfg.buzzer_timeout,
             answer_timeout=cfg.answer_timeout,
         )
@@ -38,7 +47,10 @@ class Bot:
             buzzer_timeout=cfg.buzzer_timeout,
             answer_timeout=cfg.answer_timeout,
         )
-        self._timer = game.services.TimerService(session_factory)
+        self._timer = game.services.TimerService(
+            session_factory,
+            question_selection_timeout=cfg.question_selection_timeout,
+        )
         self._dialog = bot.dialog.DialogManager()
 
         router = bot.handlers.create_router(
@@ -80,50 +92,92 @@ class Bot:
             try:
                 service_responses = await self._timer.check_timers()
                 responses = bot.views.render_many(service_responses)
-                send_tasks = []
-                for response in responses:
-                    if response.keyboard:
-                        send_tasks.append(
-                            self._tg.send_keyboard(
-                                response.chat_id,
-                                response.text,
-                                response.keyboard,
-                            )
-                        )
-                    else:
-                        send_tasks.append(
-                            self._tg.send_message(
-                                response.chat_id,
-                                response.text,
-                            )
-                        )
-                if send_tasks:
-                    await asyncio.gather(*send_tasks)
+                await self._send_responses(responses)
             except asyncio.CancelledError:
                 raise
             except Exception:
                 logger.exception("Timer loop error")
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.5)
+
+    async def _send_responses(
+        self,
+        responses: list[game.schemas.GameResponse],
+    ) -> None:
+        tasks = []
+        for response in responses:
+            if response.keyboard:
+                tasks.append(
+                    self._tg.send_keyboard(
+                        response.chat_id,
+                        response.text,
+                        response.keyboard,
+                    )
+                )
+            else:
+                tasks.append(
+                    self._tg.send_message(
+                        response.chat_id,
+                        response.text,
+                    )
+                )
+        if tasks:
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for idx, result in enumerate(results):
+                if isinstance(result, Exception):
+                    if isinstance(result, (aiohttp.ClientError, OSError)):
+                        logger.warning(
+                            "Timer network error for chat %d: %s",
+                            responses[idx].chat_id,
+                            result,
+                        )
+                    else:
+                        logger.error(
+                            "Timer send error for chat %d: %s",
+                            responses[idx].chat_id,
+                            result,
+                            exc_info=result,
+                        )
 
     async def stop(self) -> None:
-        logger.info("Bot shutting down")
+        logger.info("Bot shutting down gracefully...")
+
+        logger.info("Stopping poller (no new updates)")
         await self._poller.stop()
+
         if self._timer_task:
+            logger.info("Cancelling timer task")
             self._timer_task.cancel()
             try:
                 await self._timer_task
             except asyncio.CancelledError:
                 pass
 
+        pending = self._queue.qsize()
+        if pending > 0:
+            logger.info("Draining queue (%d pending updates)...", pending)
         try:
-            await asyncio.wait_for(self._queue.join(), timeout=10)
+            await asyncio.wait_for(
+                self._queue.join(), timeout=QUEUE_DRAIN_TIMEOUT
+            )
+            logger.info("Queue drained successfully")
         except TimeoutError:
-            logger.warning("Queue drain timed out; forcing worker stop")
+            logger.warning(
+                "Queue drain timed out after %ds; "
+                "proceeding with worker shutdown",
+                QUEUE_DRAIN_TIMEOUT,
+            )
 
+        logger.info("Stopping %d workers...", len(self._workers))
         await asyncio.gather(*(worker.stop() for worker in self._workers))
+        logger.info("All workers stopped")
+
+        logger.info("Closing Telegram client")
         await self._tg.close()
+
+        logger.info("Closing database connections")
         try:
             await self._db.disconnect()
         except Exception:
             logger.warning("Error closing database", exc_info=True)
-        logger.info("Bot stopped")
+
+        logger.info("Bot stopped cleanly")

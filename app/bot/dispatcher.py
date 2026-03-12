@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import logging
 import asyncio
+import logging
 
+import aiohttp
 import bot.dialog
 import bot.router
 import bot.views
@@ -42,13 +43,16 @@ class Dispatcher:
             if chat_id:
                 try:
                     await self._tg.send_message(
-                        chat_id, game.constants.BotMessage.DB_ERROR
+                        chat_id,
+                        game.constants.BotMessage.DB_ERROR,
                     )
                 except Exception:
                     logger.exception("Failed to send error message")
 
     @staticmethod
-    def _extract_chat_id(update: clients.schemas.Update) -> int | None:
+    def _extract_chat_id(
+        update: clients.schemas.Update,
+    ) -> int | None:
         if update.message:
             return update.message.chat.id
         if update.callback_query and update.callback_query.message:
@@ -86,7 +90,10 @@ class Dispatcher:
                 telegram_id=telegram_id,
                 username=username,
                 args=args.strip(),
+                bot_username=self._tg.bot_username,
             )
+            if not responses:
+                responses = self._chat_type_error(cmd, is_private, chat_id)
             await self._send_responses(responses)
             return
 
@@ -96,6 +103,27 @@ class Dispatcher:
             )
             if responses:
                 await self._send_responses(bot.views.render_many(responses))
+
+    def _chat_type_error(
+        self,
+        cmd: str,
+        is_private: bool,
+        chat_id: int,
+    ) -> list[game.schemas.GameResponse]:
+        if not self._router.has_command(cmd, private=not is_private):
+            return []
+        if is_private:
+            sr = game.schemas.ServiceResponse(
+                chat_id=chat_id,
+                view=game.constants.ViewName.GROUP_ONLY_COMMAND,
+            )
+        else:
+            sr = game.schemas.ServiceResponse(
+                chat_id=chat_id,
+                view=game.constants.ViewName.PRIVATE_ONLY_COMMAND,
+                payload={"bot_username": self._tg.bot_username},
+            )
+        return [bot.views.render(sr)]
 
     @staticmethod
     def _strip_mention(command: str) -> str:
@@ -133,18 +161,36 @@ class Dispatcher:
     ) -> list[game.schemas.GameResponse]:
         if text.startswith("/"):
             cmd = self._strip_mention(text.split(maxsplit=1)[0]).lower()
-            if cmd in ("/cancel", "/done"):
+            if cmd in (
+                f"/{game.constants.Command.CANCEL}",
+                f"/{game.constants.Command.DONE}",
+            ):
                 self._dialog.clear(telegram_id)
                 return bot.views.render_many(
-                    [game.schemas.ServiceResponse(chat_id, "dialog_cancelled")]
+                    [
+                        game.schemas.ServiceResponse(
+                            chat_id=chat_id,
+                            view=game.constants.ViewName.DIALOG_CANCELLED,
+                        )
+                    ]
                 )
 
         state = self._dialog.get(telegram_id)
         if not state:
             return []
 
+        return await self._dispatch_dialog_step(
+            state, telegram_id, chat_id, text
+        )
+
+    async def _dispatch_dialog_step(
+        self,
+        state: game.schemas.DialogState,
+        telegram_id: int,
+        chat_id: int,
+        text: str,
+    ) -> list[game.schemas.GameResponse]:
         step = state.step
-        prompt: str | None = None
 
         if step == game.constants.DialogStep.AWAIT_TOPIC_NAME:
             return await self._dialog_topic_name(telegram_id, chat_id, text)
@@ -152,27 +198,40 @@ class Dispatcher:
         if step == game.constants.DialogStep.AWAIT_QUESTION_TEXT:
             state.question_text = text
             self._dialog.advance(
-                telegram_id, game.constants.DialogStep.AWAIT_QUESTION_ANSWER
+                telegram_id,
+                game.constants.DialogStep.AWAIT_QUESTION_ANSWER,
             )
-            prompt = "Now send the correct answer:"
+            return bot.views.render_many(
+                [
+                    game.schemas.ServiceResponse(
+                        chat_id=chat_id,
+                        view=game.constants.ViewName.DIALOG_PROMPT_ANSWER,
+                    )
+                ]
+            )
 
-        elif step == game.constants.DialogStep.AWAIT_QUESTION_ANSWER:
+        if step == game.constants.DialogStep.AWAIT_QUESTION_ANSWER:
             state.question_answer = text
             self._dialog.advance(
-                telegram_id, game.constants.DialogStep.AWAIT_QUESTION_COST
+                telegram_id,
+                game.constants.DialogStep.AWAIT_QUESTION_COST,
             )
-            prompt = "Enter the point cost (e.g. 100, 200, 500):"
+            return bot.views.render_many(
+                [
+                    game.schemas.ServiceResponse(
+                        chat_id=chat_id,
+                        view=game.constants.ViewName.DIALOG_PROMPT_COST,
+                    )
+                ]
+            )
 
-        elif step == game.constants.DialogStep.AWAIT_QUESTION_COST:
+        if step == game.constants.DialogStep.AWAIT_QUESTION_COST:
             return await self._dialog_question_cost(
                 telegram_id, chat_id, text, state
             )
 
-        else:
-            self._dialog.clear(telegram_id)
-            return []
-
-        return [game.schemas.GameResponse(chat_id=chat_id, text=prompt)]
+        self._dialog.clear(telegram_id)
+        return []
 
     async def _dialog_topic_name(
         self,
@@ -185,7 +244,7 @@ class Dispatcher:
             return [
                 game.schemas.GameResponse(
                     chat_id=chat_id,
-                    text="Topic name cannot be empty. Try again:",
+                    text="⚠️ Topic name cannot be empty. Try again:",
                 )
             ]
         responses = await self._content.handle_add_topic(
@@ -206,7 +265,8 @@ class Dispatcher:
         except ValueError:
             return [
                 game.schemas.GameResponse(
-                    chat_id=chat_id, text="Must be a number. Try again:"
+                    chat_id=chat_id,
+                    text="⚠️ Must be a number. Try again:",
                 )
             ]
         responses = await self._content.handle_add_question(
@@ -227,7 +287,9 @@ class Dispatcher:
         for resp in responses:
             if resp.keyboard:
                 tasks.append(
-                    self._tg.send_keyboard(resp.chat_id, resp.text, resp.keyboard)
+                    self._tg.send_keyboard(
+                        resp.chat_id, resp.text, resp.keyboard
+                    )
                 )
             else:
                 tasks.append(self._tg.send_message(resp.chat_id, resp.text))
@@ -236,8 +298,16 @@ class Dispatcher:
         results = await asyncio.gather(*tasks, return_exceptions=True)
         for idx, result in enumerate(results):
             if isinstance(result, Exception):
-                logger.exception(
-                    "Failed to send response to chat %d",
-                    responses[idx].chat_id,
-                    exc_info=result,
-                )
+                if isinstance(result, (aiohttp.ClientError, OSError)):
+                    logger.warning(
+                        "Network error sending to chat %d: %s",
+                        responses[idx].chat_id,
+                        result,
+                    )
+                else:
+                    logger.error(
+                        "Failed to send response to chat %d: %s",
+                        responses[idx].chat_id,
+                        result,
+                        exc_info=result,
+                    )

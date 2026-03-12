@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import uuid
 
+import game.constants
 import game.models
 import sqlalchemy
 import sqlalchemy.ext.asyncio
-import game.constants
 
 
 class QuestionRepository:
@@ -126,10 +126,52 @@ class QuestionRepository:
             rows,
         )
 
+    async def get_random_pending(
+        self,
+        game_id: uuid.UUID,
+    ) -> (
+        sqlalchemy.Row[
+            tuple[
+                game.models.QuestionInGameModel,
+                str,
+                str,
+                str,
+                int,
+            ]
+        ]
+        | None
+    ):
+        statement = (
+            sqlalchemy.select(
+                game.models.QuestionInGameModel,
+                game.models.TopicModel.title,
+                game.models.QuestionModel.text,
+                game.models.QuestionModel.answer,
+                game.models.QuestionModel.cost,
+            )
+            .join(
+                game.models.QuestionModel,
+                game.models.QuestionInGameModel.question_id
+                == game.models.QuestionModel.id,
+            )
+            .join(
+                game.models.TopicModel,
+                game.models.QuestionModel.topic_id == game.models.TopicModel.id,
+            )
+            .where(
+                game.models.QuestionInGameModel.game_id == game_id,
+                game.models.QuestionInGameModel.status
+                == game.constants.QuestionInGameStatus.PENDING,
+            )
+            .order_by(sqlalchemy.func.random())
+            .limit(1)
+        )
+        return (await self._session.execute(statement)).one_or_none()
+
     async def get_pending_board(
         self,
         game_id: uuid.UUID,
-    ) -> list[tuple]:
+    ) -> list[sqlalchemy.Row[tuple[uuid.UUID, str, int, str, str]]]:
         statement = (
             sqlalchemy.select(
                 game.models.QuestionInGameModel.id,
@@ -161,7 +203,18 @@ class QuestionRepository:
     async def get_question_in_game_detail(
         self,
         question_in_game_id: uuid.UUID,
-    ) -> tuple | None:
+    ) -> (
+        sqlalchemy.Row[
+            tuple[
+                game.models.QuestionInGameModel,
+                str,
+                str,
+                str,
+                int,
+            ]
+        ]
+        | None
+    ):
         statement = (
             sqlalchemy.select(
                 game.models.QuestionInGameModel,
@@ -185,7 +238,7 @@ class QuestionRepository:
 
     async def topics_with_question_counts(
         self,
-    ) -> list[tuple[game.models.TopicModel, int]]:
+    ) -> list[sqlalchemy.Row[tuple[game.models.TopicModel, int]]]:
         statement = (
             sqlalchemy.select(
                 game.models.TopicModel,

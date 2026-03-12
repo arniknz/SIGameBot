@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import uuid
+
 import game.constants
+import game.models
+import sqlalchemy
 
 
-def lobby() -> list[list[dict]]:
+def lobby() -> list[list[dict[str, str]]]:
     return [
         [
             {
@@ -28,7 +32,7 @@ def lobby() -> list[list[dict]]:
     ]
 
 
-def buzzer() -> list[list[dict]]:
+def buzzer() -> list[list[dict[str, str]]]:
     return [
         [
             {
@@ -39,7 +43,18 @@ def buzzer() -> list[list[dict]]:
     ]
 
 
-def score() -> list[list[dict]]:
+def all_in() -> list[list[dict[str, str]]]:
+    return [
+        [
+            {
+                "text": "⚡ ALL-IN",
+                "callback_data": game.constants.Callback.ALL_IN,
+            }
+        ]
+    ]
+
+
+def score() -> list[list[dict[str, str]]]:
     return [
         [
             {
@@ -54,11 +69,13 @@ def score() -> list[list[dict]]:
     ]
 
 
-def board(rows: list[tuple]) -> list[list[dict]]:
-    by_topic: dict[str, list[tuple]] = {}
+def board(
+    rows: list[sqlalchemy.Row[tuple[uuid.UUID, str, int, str, str]]],
+) -> list[list[dict[str, str]]]:
+    by_topic: dict[str, list[tuple[uuid.UUID, int]]] = {}
     for qig_id, topic, cost, _text, _answer in rows:
         by_topic.setdefault(topic, []).append((qig_id, cost))
-    kb: list[list[dict]] = []
+    kb: list[list[dict[str, str]]] = []
     for topic, items in by_topic.items():
         row = []
         for qig_id, cost in sorted(items, key=lambda x: x[1]):
@@ -71,10 +88,21 @@ def board(rows: list[tuple]) -> list[list[dict]]:
                 }
             )
         kb.append(row)
+    if rows:
+        kb.append(
+            [
+                {
+                    "text": "🎲 Cat in a Bag",
+                    "callback_data": game.constants.Callback.CAT_IN_BAG,
+                }
+            ]
+        )
     return kb
 
 
-def board_text(rows: list[tuple]) -> str:
+def board_text(
+    rows: list[sqlalchemy.Row[tuple[uuid.UUID, str, int, str, str]]],
+) -> str:
     by_topic: dict[str, list[int]] = {}
     for _qig_id, topic, cost, _text, _answer in rows:
         by_topic.setdefault(topic, []).append(cost)
@@ -84,8 +112,10 @@ def board_text(rows: list[tuple]) -> str:
     return "\n".join(lines) if lines else "No questions remaining."
 
 
-def topic_select_for_add(topics: list) -> list[list[dict]]:
-    kb: list[list[dict]] = [
+def topic_select_for_add(
+    topics: list[game.models.TopicModel],
+) -> list[list[dict[str, str]]]:
+    kb: list[list[dict[str, str]]] = [
         [
             {
                 "text": t.title,
@@ -101,7 +131,7 @@ def topic_select_for_add(topics: list) -> list[list[dict]]:
             {
                 "text": "❌ Cancel",
                 "callback_data": (
-                    f"{game.constants.CallbackPrefix.ADD_QUESTION_TOPIC}:cancel"
+                    f"{game.constants.CallbackPrefix.ADD_QUESTION_TOPIC}:{game.constants.Callback.CANCEL}"
                 ),
             }
         ]
@@ -110,9 +140,11 @@ def topic_select_for_add(topics: list) -> list[list[dict]]:
 
 
 def topic_select_for_delete(
-    topics_with_counts: list[tuple],
-) -> list[list[dict]]:
-    kb: list[list[dict]] = []
+    topics_with_counts: list[
+        sqlalchemy.Row[tuple[game.models.TopicModel, int]]
+    ],
+) -> list[list[dict[str, str]]]:
+    kb: list[list[dict[str, str]]] = []
     for topic, count in topics_with_counts:
         kb.append(
             [
@@ -129,7 +161,7 @@ def topic_select_for_delete(
             {
                 "text": "❌ Cancel",
                 "callback_data": (
-                    f"{game.constants.CallbackPrefix.DELETE_TOPIC}:cancel"
+                    f"{game.constants.CallbackPrefix.DELETE_TOPIC}:{game.constants.Callback.CANCEL}"
                 ),
             }
         ]
@@ -138,9 +170,11 @@ def topic_select_for_delete(
 
 
 def topic_select_for_delete_question(
-    topics_with_counts: list[tuple],
-) -> list[list[dict]]:
-    kb: list[list[dict]] = []
+    topics_with_counts: list[
+        sqlalchemy.Row[tuple[game.models.TopicModel, int]]
+    ],
+) -> list[list[dict[str, str]]]:
+    kb: list[list[dict[str, str]]] = []
     for topic, count in topics_with_counts:
         if count > 0:
             kb.append(
@@ -159,7 +193,7 @@ def topic_select_for_delete_question(
             {
                 "text": "❌ Cancel",
                 "callback_data": (
-                    f"{game.constants.CallbackPrefix.DELETE_QUESTION_TOPIC}:cancel"
+                    f"{game.constants.CallbackPrefix.DELETE_QUESTION_TOPIC}:{game.constants.Callback.CANCEL}"
                 ),
             }
         ]
@@ -167,8 +201,39 @@ def topic_select_for_delete_question(
     return kb
 
 
-def question_select_for_delete(questions: list) -> list[list[dict]]:
-    kb: list[list[dict]] = []
+def _supergroup_url(chat_id: int) -> str | None:
+    s = str(chat_id)
+    if s.startswith("-100") and len(s) > 4:
+        return f"https://t.me/c/{s[4:]}"
+    return None
+
+
+def dm_bot_button(
+    bot_username: str,
+) -> list[dict[str, str]]:
+    return [
+        {
+            "text": "📩 Manage content in DM",
+            "url": f"https://t.me/{bot_username}?start=help",
+        }
+    ]
+
+
+def my_games_jump_buttons(
+    games: list[dict[str, object]],
+) -> list[list[dict[str, str]]]:
+    kb: list[list[dict[str, str]]] = []
+    for i, g in enumerate(games, 1):
+        url = _supergroup_url(int(str(g["chat_id"])))
+        if url:
+            kb.append([{"text": f"🔗 Jump to game #{i}", "url": url}])
+    return kb
+
+
+def question_select_for_delete(
+    questions: list[game.models.QuestionModel],
+) -> list[list[dict[str, str]]]:
+    kb: list[list[dict[str, str]]] = []
     for q in questions:
         label = q.text[:40] + "..." if len(q.text) > 40 else q.text
         kb.append(
@@ -188,7 +253,7 @@ def question_select_for_delete(questions: list) -> list[list[dict]]:
                 "text": "❌ Cancel",
                 "callback_data": (
                     f"{game.constants.CallbackPrefix.DELETE_QUESTION_CONFIRM}"
-                    ":cancel"
+                    f":{game.constants.Callback.CANCEL}"
                 ),
             }
         ]

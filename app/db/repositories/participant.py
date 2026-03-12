@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 import uuid
 
+import game.constants
 import game.models
 import sqlalchemy
 import sqlalchemy.ext.asyncio
-import game.constants
+
+logger = logging.getLogger(__name__)
 
 
 class ParticipantRepository:
@@ -82,19 +85,47 @@ class ParticipantRepository:
     async def pick_random(
         self,
         game_id: uuid.UUID,
+        exclude_id: uuid.UUID | None = None,
     ) -> game.models.ParticipantModel | None:
+        conditions = [
+            game.models.ParticipantModel.game_id == game_id,
+            game.models.ParticipantModel.role
+            == game.constants.ParticipantRole.PLAYER,
+            game.models.ParticipantModel.is_active.is_(True),
+        ]
+        if exclude_id is not None:
+            conditions.append(
+                game.models.ParticipantModel.id != exclude_id,
+            )
         statement = (
             sqlalchemy.select(game.models.ParticipantModel)
-            .where(
-                game.models.ParticipantModel.game_id == game_id,
-                game.models.ParticipantModel.role
-                == game.constants.ParticipantRole.PLAYER,
-                game.models.ParticipantModel.is_active.is_(True),
-            )
+            .where(*conditions)
             .order_by(sqlalchemy.func.random())
             .limit(1)
         )
-        return (await self._session.execute(statement)).scalar_one_or_none()
+        result = (await self._session.execute(statement)).scalar_one_or_none()
+        if result is None and exclude_id is not None:
+            fallback = (
+                sqlalchemy.select(game.models.ParticipantModel)
+                .where(
+                    game.models.ParticipantModel.game_id == game_id,
+                    game.models.ParticipantModel.role
+                    == game.constants.ParticipantRole.PLAYER,
+                    game.models.ParticipantModel.is_active.is_(True),
+                )
+                .order_by(sqlalchemy.func.random())
+                .limit(1)
+            )
+            result = (
+                await self._session.execute(fallback)
+            ).scalar_one_or_none()
+        if result is not None:
+            logger.debug(
+                "Random pick for game %s: participant %s",
+                game_id,
+                result.id,
+            )
+        return result
 
     async def get_active_player_by_id(
         self,
@@ -109,3 +140,19 @@ class ParticipantRepository:
             game.models.ParticipantModel.is_active.is_(True),
         )
         return (await self._session.execute(statement)).scalar_one_or_none()
+
+    async def get_max_score(
+        self,
+        game_id: uuid.UUID,
+    ) -> int:
+        statement = sqlalchemy.select(
+            sqlalchemy.func.coalesce(
+                sqlalchemy.func.max(game.models.ParticipantModel.score), 0
+            )
+        ).where(
+            game.models.ParticipantModel.game_id == game_id,
+            game.models.ParticipantModel.role
+            == game.constants.ParticipantRole.PLAYER,
+            game.models.ParticipantModel.is_active.is_(True),
+        )
+        return (await self._session.execute(statement)).scalar_one()

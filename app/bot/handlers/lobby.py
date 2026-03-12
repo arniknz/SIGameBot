@@ -11,8 +11,21 @@ def register(
 ) -> None:
 
     @router.command(game.constants.Command.START)
-    async def cmd_start(chat_id: int, telegram_id: int, username: str, **_):
-        result = await lobby.handle_start(chat_id, telegram_id, username)
+    async def cmd_start(
+        chat_id: int,
+        telegram_id: int,
+        username: str,
+        bot_username: str = "",
+        **_,
+    ):
+        result = await lobby.handle_start(
+            chat_id, telegram_id, username, bot_username
+        )
+        return bot.views.render_many(result)
+
+    @router.command(game.constants.Command.JOIN)
+    async def cmd_join(chat_id: int, telegram_id: int, username: str, **_):
+        result = await lobby.handle_join(chat_id, telegram_id, username)
         return bot.views.render_many(result)
 
     @router.callback(game.constants.Callback.JOIN)
@@ -20,14 +33,29 @@ def register(
         result = await lobby.handle_join(chat_id, telegram_id, username)
         return bot.views.render_many(result)
 
+    @router.command(game.constants.Command.SPECTATE)
+    async def cmd_spectate(chat_id: int, telegram_id: int, username: str, **_):
+        result = await lobby.handle_spectate(chat_id, telegram_id, username)
+        return bot.views.render_many(result)
+
     @router.callback(game.constants.Callback.SPECTATE)
     async def cb_spectate(chat_id: int, telegram_id: int, username: str, **_):
         result = await lobby.handle_spectate(chat_id, telegram_id, username)
         return bot.views.render_many(result)
 
+    @router.command(game.constants.Command.LEAVE)
+    async def cmd_leave(chat_id: int, telegram_id: int, username: str, **_):
+        result = await lobby.handle_leave(chat_id, telegram_id, username)
+        return bot.views.render_many(result)
+
     @router.callback(game.constants.Callback.LEAVE)
     async def cb_leave(chat_id: int, telegram_id: int, username: str, **_):
         result = await lobby.handle_leave(chat_id, telegram_id, username)
+        return bot.views.render_many(result)
+
+    @router.command(game.constants.Command.STOP)
+    async def cmd_stop(chat_id: int, telegram_id: int, **_):
+        result = await lobby.handle_stop(chat_id, telegram_id)
         return bot.views.render_many(result)
 
     @router.callback(game.constants.Callback.STOP)

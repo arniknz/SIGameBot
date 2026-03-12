@@ -4,16 +4,17 @@ import datetime
 import typing
 import uuid
 
+import game.constants
 import sqlalchemy
 import sqlalchemy.dialects.postgresql
 import sqlalchemy.orm
-import game.models.base
+from game.models.base import Base
 
 if typing.TYPE_CHECKING:
     from game.models.game import GameModel
 
 
-class TopicModel(game.models.base.Base):
+class TopicModel(Base):
     __tablename__ = "topics"
 
     id: sqlalchemy.orm.Mapped[uuid.UUID] = sqlalchemy.orm.mapped_column(
@@ -34,7 +35,7 @@ class TopicModel(game.models.base.Base):
     )
 
 
-class QuestionModel(game.models.base.Base):
+class QuestionModel(Base):
     __tablename__ = "questions"
     __table_args__ = (
         sqlalchemy.CheckConstraint("cost > 0", name="ck_question_cost"),
@@ -68,7 +69,7 @@ class QuestionModel(game.models.base.Base):
     )
 
 
-class QuestionInGameModel(game.models.base.Base):
+class QuestionInGameModel(Base):
     __tablename__ = "questions_in_game"
     __table_args__ = (
         sqlalchemy.UniqueConstraint(

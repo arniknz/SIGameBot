@@ -15,6 +15,15 @@ def register(
     content: game.services.ContentService,
     dialog: bot.dialog.DialogManager,
 ) -> None:
+    _register_commands(router, content, dialog)
+    _register_callbacks(router, content, dialog)
+
+
+def _register_commands(
+    router: bot.router.Router,
+    content: game.services.ContentService,
+    dialog: bot.dialog.DialogManager,
+) -> None:
     @router.command(game.constants.Command.START, private=True)
     async def cmd_private_start(chat_id: int, **_):
         result = await content.handle_help(chat_id)
@@ -51,30 +60,54 @@ def register(
         return bot.views.render_many(result)
 
     @router.command(game.constants.Command.ADD_TOPIC, private=True)
-    async def cmd_add_topic(telegram_id: int, chat_id: int, **_):
+    def cmd_add_topic(telegram_id: int, chat_id: int, **_):
         dialog.start_add_topic(telegram_id, game_chat_id=0)
         return bot.views.render_many(
-            [game.schemas.ServiceResponse(chat_id, "dialog_prompt_topic")]
+            [
+                game.schemas.ServiceResponse(
+                    chat_id,
+                    game.constants.ViewName.DIALOG_PROMPT_TOPIC,
+                )
+            ]
         )
 
     @router.command(game.constants.Command.CANCEL, private=True)
     @router.command(game.constants.Command.DONE, private=True)
-    async def cmd_cancel_or_done(telegram_id: int, chat_id: int, **_):
+    def cmd_cancel_or_done(telegram_id: int, chat_id: int, **_):
         dialog.clear(telegram_id)
         return bot.views.render_many(
-            [game.schemas.ServiceResponse(chat_id, "dialog_done")]
+            [
+                game.schemas.ServiceResponse(
+                    chat_id,
+                    game.constants.ViewName.DIALOG_DONE,
+                )
+            ]
         )
 
+
+def _register_callbacks(
+    router: bot.router.Router,
+    content: game.services.ContentService,
+    dialog: bot.dialog.DialogManager,
+) -> None:
     @router.callback_pattern(
         rf"^{game.constants.CallbackPrefix.DELETE_TOPIC}:(.+)$"
     )
     async def cb_del_topic(
-        match: re.Match[str], chat_id: int, telegram_id: int, **_
+        match: re.Match[str],
+        chat_id: int,
+        telegram_id: int,
+        **_,
     ):
         value = match.group(1)
-        if value == "cancel":
+        if value == game.constants.Callback.CANCEL:
             return bot.views.render_many(
-                [game.schemas.ServiceResponse(chat_id, "dialog_cancelled")]
+                [
+                    game.schemas.ServiceResponse(
+                        chat_id,
+                        game.constants.ViewName.DIALOG_CANCELLED,
+                    )
+                ]
             )
         result = await content.confirm_delete_topic(chat_id, telegram_id, value)
         return bot.views.render_many(result)
@@ -84,9 +117,14 @@ def register(
     )
     async def cb_delq_topic(match: re.Match[str], chat_id: int, **_):
         value = match.group(1)
-        if value == "cancel":
+        if value == game.constants.Callback.CANCEL:
             return bot.views.render_many(
-                [game.schemas.ServiceResponse(chat_id, "dialog_cancelled")]
+                [
+                    game.schemas.ServiceResponse(
+                        chat_id,
+                        game.constants.ViewName.DIALOG_CANCELLED,
+                    )
+                ]
             )
         result = await content.list_questions_for_delete(chat_id, value)
         return bot.views.render_many(result)
@@ -95,12 +133,20 @@ def register(
         rf"^{game.constants.CallbackPrefix.DELETE_QUESTION_CONFIRM}:(.+)$"
     )
     async def cb_delq_confirm(
-        match: re.Match[str], chat_id: int, telegram_id: int, **_
+        match: re.Match[str],
+        chat_id: int,
+        telegram_id: int,
+        **_,
     ):
         value = match.group(1)
-        if value == "cancel":
+        if value == game.constants.Callback.CANCEL:
             return bot.views.render_many(
-                [game.schemas.ServiceResponse(chat_id, "dialog_cancelled")]
+                [
+                    game.schemas.ServiceResponse(
+                        chat_id,
+                        game.constants.ViewName.DIALOG_CANCELLED,
+                    )
+                ]
             )
         result = await content.confirm_delete_question(
             chat_id, telegram_id, value
@@ -111,14 +157,27 @@ def register(
         rf"^{game.constants.CallbackPrefix.ADD_QUESTION_TOPIC}:(.+)$"
     )
     def cb_addq_topic(
-        match: re.Match[str], chat_id: int, telegram_id: int, **_
+        match: re.Match[str],
+        chat_id: int,
+        telegram_id: int,
+        **_,
     ):
         value = match.group(1)
-        if value == "cancel":
+        if value == game.constants.Callback.CANCEL:
             return bot.views.render_many(
-                [game.schemas.ServiceResponse(chat_id, "dialog_cancelled")]
+                [
+                    game.schemas.ServiceResponse(
+                        chat_id,
+                        game.constants.ViewName.DIALOG_CANCELLED,
+                    )
+                ]
             )
         dialog.start_add_question(telegram_id, game_chat_id=0, topic_id=value)
         return bot.views.render_many(
-            [game.schemas.ServiceResponse(chat_id, "dialog_prompt_question")]
+            [
+                game.schemas.ServiceResponse(
+                    chat_id,
+                    game.constants.ViewName.DIALOG_PROMPT_QUESTION,
+                )
+            ]
         )

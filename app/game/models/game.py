@@ -4,18 +4,18 @@ import datetime
 import typing
 import uuid
 
+import game.constants
 import sqlalchemy
 import sqlalchemy.dialects.postgresql
 import sqlalchemy.orm
-import game.constants
-import game.models.base
+from game.models.base import Base
 
 if typing.TYPE_CHECKING:
     from game.models.question import QuestionInGameModel
     from game.models.user import UserModel
 
 
-class GameModel(game.models.base.Base):
+class GameModel(Base):
     __tablename__ = "games"
 
     id: sqlalchemy.orm.Mapped[uuid.UUID] = sqlalchemy.orm.mapped_column(
@@ -71,7 +71,7 @@ class GameModel(game.models.base.Base):
     )
 
 
-class ParticipantModel(game.models.base.Base):
+class ParticipantModel(Base):
     __tablename__ = "participants"
     __table_args__ = (
         sqlalchemy.UniqueConstraint("game_id", "user_id", name="uq_game_user"),
@@ -111,6 +111,10 @@ class ParticipantModel(game.models.base.Base):
         sqlalchemy.Boolean,
         default=True,
     )
+    all_in_used: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean,
+        default=False,
+    )
 
     user: sqlalchemy.orm.Mapped[UserModel] = sqlalchemy.orm.relationship(
         back_populates="participants",
@@ -121,7 +125,7 @@ class ParticipantModel(game.models.base.Base):
     )
 
 
-class GameStateModel(game.models.base.Base):
+class GameStateModel(Base):
     __tablename__ = "game_states"
 
     id: sqlalchemy.orm.Mapped[uuid.UUID] = sqlalchemy.orm.mapped_column(
@@ -159,6 +163,15 @@ class GameStateModel(game.models.base.Base):
         sqlalchemy.orm.mapped_column(
             sqlalchemy.DateTime(timezone=True),
         )
+    )
+    cost_override: sqlalchemy.orm.Mapped[int | None] = (
+        sqlalchemy.orm.mapped_column(
+            sqlalchemy.Integer,
+        )
+    )
+    all_in_active: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean,
+        default=False,
     )
     updated_at: sqlalchemy.orm.Mapped[datetime.datetime] = (
         sqlalchemy.orm.mapped_column(
