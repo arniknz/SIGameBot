@@ -135,13 +135,41 @@ def _render_question_asked(cid: int, p: _P) -> game.schemas.GameResponse:
     )
 
 
+def _render_cat_revealed(cid: int, p: _P) -> game.schemas.GameResponse:
+    return _make(
+        cid,
+        (
+            f"🎲 Cat in a Bag!\n\n"
+            f"📢 Category: {p['topic']}\n"
+            f"💰 Worth: {p['cost']} points\n\n"
+            f"❓ {p['text']}\n\n"
+            f"⏱ {p['buzzer_timeout']}s — hit the buzzer!"
+        ),
+        keyboard=bot.keyboards.buzzer(),
+    )
+
+
 def _render_buzzer_pressed(cid: int, p: _P) -> game.schemas.GameResponse:
+    kb = bot.keyboards.all_in() if p.get("show_all_in") else None
     return _make(
         cid,
         (
             f"⚡ {p['username']} hit the buzzer!\n\n"
             f"⏱ You have {p['answer_timeout']}s to answer.\n"
             f"Type your answer now!"
+        ),
+        keyboard=kb,
+    )
+
+
+def _render_all_in_activated(cid: int, p: _P) -> game.schemas.GameResponse:
+    return _make(
+        cid,
+        (
+            f"⚡ {p['username']} goes ALL-IN!\n\n"
+            f"🎯 Correct answer → DOUBLE points (+{p['cost'] * 2})!\n"
+            f"💀 Wrong answer → score drops to 0!\n\n"
+            f"⏱ Type your answer now!"
         ),
     )
 
@@ -264,7 +292,12 @@ def _render_help(cid: int, _p: _P) -> game.schemas.GameResponse:
             "  /delete_question — Delete a question\n\n"
             "ℹ️ Available Everywhere:\n"
             "  /help — This message\n"
-            "  /rules — Game rules"
+            "  /rules — Game rules\n\n"
+            "🎲 Special Mechanics:\n"
+            "  🎲 Cat in a Bag — random question "
+            "from any topic at a surprise cost\n"
+            "  ⚡ ALL-IN — double-or-nothing bet "
+            "for losing players (once per game)"
         ),
     )
 
@@ -290,6 +323,13 @@ def _render_rules(cid: int, p: _P) -> game.schemas.GameResponse:
             "question is burned\n"
             "🔟 Game ends when all questions "
             "are answered\n\n"
+            "🎲 Cat in a Bag — pick the mystery "
+            "button on the board to get a random "
+            "question from any topic at a surprise cost!\n\n"
+            "⚡ ALL-IN — if your score is less than "
+            "half the leader's, you can go all-in "
+            "after buzzing. Correct = double points, "
+            "wrong = score drops to 0! Once per game.\n\n"
             "🏆 Player with the most points wins!"
         ),
     )
@@ -407,7 +447,9 @@ _RENDERERS: dict[game.constants.ViewName, Renderer] = {
     game.constants.ViewName.SCOREBOARD: _render_scoreboard,
     game.constants.ViewName.BOARD: _render_board,
     game.constants.ViewName.QUESTION_ASKED: _render_question_asked,
+    game.constants.ViewName.CAT_REVEALED: _render_cat_revealed,
     game.constants.ViewName.BUZZER_PRESSED: _render_buzzer_pressed,
+    game.constants.ViewName.ALL_IN_ACTIVATED: _render_all_in_activated,
     game.constants.ViewName.ANSWER_CORRECT: _render_answer_correct,
     game.constants.ViewName.ANSWER_WRONG: _render_answer_wrong,
     game.constants.ViewName.BUZZER_TIMEOUT: _render_buzzer_timeout,

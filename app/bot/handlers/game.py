@@ -27,6 +27,16 @@ def register(
         result = await gameplay.handle_buzzer(chat_id, telegram_id, username)
         return bot.views.render_many(result)
 
+    @router.callback(game.constants.Callback.CAT_IN_BAG)
+    async def cb_cat_in_bag(chat_id: int, telegram_id: int, **_):
+        result = await gameplay.handle_cat_in_bag(chat_id, telegram_id)
+        return bot.views.render_many(result)
+
+    @router.callback(game.constants.Callback.ALL_IN)
+    async def cb_all_in(chat_id: int, telegram_id: int, username: str, **_):
+        result = await gameplay.handle_all_in(chat_id, telegram_id, username)
+        return bot.views.render_many(result)
+
     @router.callback_pattern(
         rf"^{game.constants.CallbackPrefix.QUESTION}:(.+)$"
     )

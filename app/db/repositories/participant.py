@@ -140,3 +140,19 @@ class ParticipantRepository:
             game.models.ParticipantModel.is_active.is_(True),
         )
         return (await self._session.execute(statement)).scalar_one_or_none()
+
+    async def get_max_score(
+        self,
+        game_id: uuid.UUID,
+    ) -> int:
+        statement = sqlalchemy.select(
+            sqlalchemy.func.coalesce(
+                sqlalchemy.func.max(game.models.ParticipantModel.score), 0
+            )
+        ).where(
+            game.models.ParticipantModel.game_id == game_id,
+            game.models.ParticipantModel.role
+            == game.constants.ParticipantRole.PLAYER,
+            game.models.ParticipantModel.is_active.is_(True),
+        )
+        return (await self._session.execute(statement)).scalar_one()

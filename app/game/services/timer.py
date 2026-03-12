@@ -178,6 +178,7 @@ class TimerService:
 
         question_in_game.status = game.constants.QuestionInGameStatus.ANSWERED
         question_in_game.answered_at = datetime.datetime.now(datetime.UTC)
+        game_state.cost_override = None
 
         responses: list[game.schemas.ServiceResponse] = [
             _result(
@@ -218,8 +219,10 @@ class TimerService:
             _topic_title,
             _question_text,
             correct_answer,
-            cost,
+            original_cost,
         ) = detail
+
+        effective_cost = game_state.cost_override or original_cost
 
         buzzer_holder_name = "Unknown"
         if game_state.buzzer_pressed_by:
@@ -228,7 +231,11 @@ class TimerService:
                 game_state.buzzer_pressed_by,
             )
             if buzzer_player is not None:
-                buzzer_player.score -= cost
+                if game_state.all_in_active:
+                    buzzer_player.score = 0
+                    buzzer_player.all_in_used = True
+                else:
+                    buzzer_player.score -= effective_cost
                 user_repo = db.repositories.user.UserRepository(session)
                 buzzer_user = await user_repo.get_by_id(buzzer_player.user_id)
                 buzzer_holder_name = (
@@ -237,21 +244,23 @@ class TimerService:
 
         question_in_game.status = game.constants.QuestionInGameStatus.ANSWERED
         question_in_game.answered_at = datetime.datetime.now(datetime.UTC)
+        game_state.cost_override = None
+        game_state.all_in_active = False
 
         responses: list[game.schemas.ServiceResponse] = [
             _result(
                 chat_id,
                 game.constants.ViewName.ANSWER_TIMEOUT,
                 username=buzzer_holder_name,
-                cost=cost,
+                cost=effective_cost,
                 correct_answer=correct_answer,
             ),
         ]
-
-        round_responses = await self._next_round_or_finish(
-            session, active_game, game_state, chat_id
+        responses.extend(
+            await self._next_round_or_finish(
+                session, active_game, game_state, chat_id
+            )
         )
-        responses.extend(round_responses)
         return responses
 
     async def _next_round_or_finish(
@@ -273,6 +282,8 @@ class TimerService:
         game_state.current_question_id = None
         game_state.buzzer_pressed_by = None
         game_state.buzzer_pressed_at = None
+        game_state.cost_override = None
+        game_state.all_in_active = False
         game_state.timer_ends_at = now + datetime.timedelta(
             seconds=self._question_selection_timeout,
         )
@@ -372,6 +383,8 @@ class TimerService:
                 game_state.current_question_id = None
                 game_state.buzzer_pressed_by = None
                 game_state.buzzer_pressed_at = None
+                game_state.cost_override = None
+                game_state.all_in_active = False
                 game_state.timer_ends_at = now + datetime.timedelta(
                     seconds=self._question_selection_timeout,
                 )
