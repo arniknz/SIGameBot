@@ -30,9 +30,7 @@ def _make(
     )
 
 
-def _render_game_created(
-    cid: int, p: _P
-) -> game.schemas.GameResponse:
+def _render_game_created(cid: int, p: _P) -> game.schemas.GameResponse:
     kb = bot.keyboards.lobby()
     bot_username = p.get("bot_username")
     if bot_username:
@@ -49,9 +47,7 @@ def _render_game_created(
     )
 
 
-def _render_player_joined(
-    cid: int, p: _P
-) -> game.schemas.GameResponse:
+def _render_player_joined(cid: int, p: _P) -> game.schemas.GameResponse:
     names = p["player_names"]
     return _make(
         cid,
@@ -62,36 +58,28 @@ def _render_player_joined(
     )
 
 
-def _render_player_rejoined(
-    cid: int, p: _P
-) -> game.schemas.GameResponse:
+def _render_player_rejoined(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         f"🔄 Welcome back, {p['username']}! Ready to play again?",
     )
 
 
-def _render_now_spectating(
-    cid: int, p: _P
-) -> game.schemas.GameResponse:
+def _render_now_spectating(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         f"👀 {p['username']} is watching the game. Enjoy the show!",
     )
 
 
-def _render_left_game(
-    cid: int, p: _P
-) -> game.schemas.GameResponse:
+def _render_left_game(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         f"👋 {p['username']} has left the game. See you next time!",
     )
 
 
-def _render_host_transferred(
-    cid: int, p: _P
-) -> game.schemas.GameResponse:
+def _render_host_transferred(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
@@ -102,22 +90,16 @@ def _render_host_transferred(
     )
 
 
-def _render_scoreboard(
-    cid: int, p: _P
-) -> game.schemas.GameResponse:
+def _render_scoreboard(cid: int, p: _P) -> game.schemas.GameResponse:
     lines = [p["title"]]
     for rank, (name, points) in enumerate(p["scores"], 1):
         medal = _MEDAL.get(rank, f"{rank}.")
         lines.append(f"{medal} {name}: {points} pts")
-    keyboard = (
-        bot.keyboards.score() if p.get("with_controls") else None
-    )
+    keyboard = bot.keyboards.score() if p.get("with_controls") else None
     return _make(cid, "\n".join(lines), keyboard=keyboard)
 
 
-def _render_board(
-    cid: int, p: _P
-) -> game.schemas.GameResponse:
+def _render_board(cid: int, p: _P) -> game.schemas.GameResponse:
     rows = p["rows"]
     intro = p["intro"]
     player = p["current_player"]
@@ -140,9 +122,7 @@ def _render_board(
     )
 
 
-def _render_question_asked(
-    cid: int, p: _P
-) -> game.schemas.GameResponse:
+def _render_question_asked(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
@@ -155,9 +135,7 @@ def _render_question_asked(
     )
 
 
-def _render_buzzer_pressed(
-    cid: int, p: _P
-) -> game.schemas.GameResponse:
+def _render_buzzer_pressed(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
@@ -168,9 +146,7 @@ def _render_buzzer_pressed(
     )
 
 
-def _render_answer_correct(
-    cid: int, p: _P
-) -> game.schemas.GameResponse:
+def _render_answer_correct(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
@@ -182,9 +158,7 @@ def _render_answer_correct(
     )
 
 
-def _render_answer_wrong(
-    cid: int, p: _P
-) -> game.schemas.GameResponse:
+def _render_answer_wrong(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
@@ -196,9 +170,7 @@ def _render_answer_wrong(
     )
 
 
-def _render_buzzer_timeout(
-    cid: int, p: _P
-) -> game.schemas.GameResponse:
+def _render_buzzer_timeout(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
@@ -208,9 +180,7 @@ def _render_buzzer_timeout(
     )
 
 
-def _render_answer_timeout(
-    cid: int, p: _P
-) -> game.schemas.GameResponse:
+def _render_answer_timeout(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
@@ -222,9 +192,7 @@ def _render_answer_timeout(
     )
 
 
-def _render_choosing_timeout(
-    cid: int, p: _P
-) -> game.schemas.GameResponse:
+def _render_choosing_timeout(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
@@ -235,9 +203,7 @@ def _render_choosing_timeout(
     )
 
 
-def _render_topic_select_for_add(
-    cid: int, p: _P
-) -> game.schemas.GameResponse:
+def _render_topic_select_for_add(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         "📂 Pick a topic for your new question:",
@@ -251,9 +217,7 @@ def _render_topic_select_for_delete(
     return _make(
         cid,
         "🗑 Select a topic to delete (all questions will be removed):",
-        keyboard=bot.keyboards.topic_select_for_delete(
-            p["topics_with_counts"]
-        ),
+        keyboard=bot.keyboards.topic_select_for_delete(p["topics_with_counts"]),
     )
 
 
@@ -275,15 +239,11 @@ def _render_question_select_for_delete(
     return _make(
         cid,
         "🗑 Pick a question to delete:",
-        keyboard=bot.keyboards.question_select_for_delete(
-            p["questions"]
-        ),
+        keyboard=bot.keyboards.question_select_for_delete(p["questions"]),
     )
 
 
-def _render_help(
-    cid: int, _p: _P
-) -> game.schemas.GameResponse:
+def _render_help(cid: int, _p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
@@ -309,9 +269,7 @@ def _render_help(
     )
 
 
-def _render_rules(
-    cid: int, p: _P
-) -> game.schemas.GameResponse:
+def _render_rules(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
@@ -337,9 +295,7 @@ def _render_rules(
     )
 
 
-def _render_my_games(
-    cid: int, p: _P
-) -> game.schemas.GameResponse:
+def _render_my_games(cid: int, p: _P) -> game.schemas.GameResponse:
     games = p["games"]
     lines = ["🎮 Your Active Games\n"]
     status_icons = {"waiting": "⏳", "active": "🎯"}
@@ -354,9 +310,7 @@ def _render_my_games(
     return _make(cid, "\n".join(lines), keyboard=kb or None)
 
 
-def _render_private_only_command(
-    cid: int, p: _P
-) -> game.schemas.GameResponse:
+def _render_private_only_command(cid: int, p: _P) -> game.schemas.GameResponse:
     bot_username = p.get("bot_username", "")
     text = "❌ This command only works in private chat with me."
     kb: list[list[dict[str, str]]] | None = None
@@ -389,9 +343,7 @@ _SIMPLE_VIEWS: dict[game.constants.ViewName, str] = {
     game.constants.ViewName.GAME_IN_PROGRESS: (
         "🕹 Game is already in progress!"
     ),
-    game.constants.ViewName.ONLY_HOST: (
-        "🚫 Only the host can do this action."
-    ),
+    game.constants.ViewName.ONLY_HOST: ("🚫 Only the host can do this action."),
     game.constants.ViewName.NEED_TWO_PLAYERS: (
         "👥 Need at least 2 players to start. Invite more friends!"
     ),
@@ -401,9 +353,7 @@ _SIMPLE_VIEWS: dict[game.constants.ViewName, str] = {
     game.constants.ViewName.NOT_YOUR_TURN: (
         "🙅 It's not your turn to choose a question."
     ),
-    game.constants.ViewName.DIALOG_PROMPT_TOPIC: (
-        "📝 Enter the topic name:"
-    ),
+    game.constants.ViewName.DIALOG_PROMPT_TOPIC: ("📝 Enter the topic name:"),
     game.constants.ViewName.DIALOG_PROMPT_QUESTION: (
         "✏️ Send the question text:"
     ),
@@ -415,9 +365,7 @@ _SIMPLE_VIEWS: dict[game.constants.ViewName, str] = {
     ),
     game.constants.ViewName.DIALOG_CANCELLED: "❌ Cancelled.",
     game.constants.ViewName.DIALOG_DONE: "✅ Done!",
-    game.constants.ViewName.DB_ERROR: (
-        game.constants.BotMessage.DB_ERROR
-    ),
+    game.constants.ViewName.DB_ERROR: (game.constants.BotMessage.DB_ERROR),
     game.constants.ViewName.GAME_ENDED_NO_PLAYERS: (
         "🏚 No players remain — game ended."
     ),
@@ -425,8 +373,7 @@ _SIMPLE_VIEWS: dict[game.constants.ViewName, str] = {
         "🤔 Unknown command. Use /help to see what I can do!"
     ),
     game.constants.ViewName.GROUP_ONLY_COMMAND: (
-        "❌ This command only works in group chats. "
-        "Add me to a group to play!"
+        "❌ This command only works in group chats. Add me to a group to play!"
     ),
 }
 
@@ -507,8 +454,6 @@ def render(
 
     username_template = _USERNAME_VIEWS.get(view)
     if username_template is not None:
-        return _render_simple_with_username(
-            cid, p, username_template
-        )
+        return _render_simple_with_username(cid, p, username_template)
 
     return _make(cid, "⚠️ Something unexpected happened.")

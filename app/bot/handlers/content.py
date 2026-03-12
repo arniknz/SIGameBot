@@ -109,17 +109,13 @@ def _register_callbacks(
                     )
                 ]
             )
-        result = await content.confirm_delete_topic(
-            chat_id, telegram_id, value
-        )
+        result = await content.confirm_delete_topic(chat_id, telegram_id, value)
         return bot.views.render_many(result)
 
     @router.callback_pattern(
         rf"^{game.constants.CallbackPrefix.DELETE_QUESTION_TOPIC}:(.+)$"
     )
-    async def cb_delq_topic(
-        match: re.Match[str], chat_id: int, **_
-    ):
+    async def cb_delq_topic(match: re.Match[str], chat_id: int, **_):
         value = match.group(1)
         if value == game.constants.Callback.CANCEL:
             return bot.views.render_many(
@@ -130,9 +126,7 @@ def _register_callbacks(
                     )
                 ]
             )
-        result = await content.list_questions_for_delete(
-            chat_id, value
-        )
+        result = await content.list_questions_for_delete(chat_id, value)
         return bot.views.render_many(result)
 
     @router.callback_pattern(
@@ -178,9 +172,7 @@ def _register_callbacks(
                     )
                 ]
             )
-        dialog.start_add_question(
-            telegram_id, game_chat_id=0, topic_id=value
-        )
+        dialog.start_add_question(telegram_id, game_chat_id=0, topic_id=value)
         return bot.views.render_many(
             [
                 game.schemas.ServiceResponse(

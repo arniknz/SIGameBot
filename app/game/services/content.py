@@ -325,33 +325,22 @@ class ContentService:
             self._session_factory() as session,
             session.begin(),
         ):
-            user_repo = db.repositories.user.UserRepository(
-                session
-            )
-            game_repo = db.repositories.game.GameRepository(
-                session
-            )
+            user_repo = db.repositories.user.UserRepository(session)
+            game_repo = db.repositories.game.GameRepository(session)
 
-            user = await user_repo.get_by_telegram_id(
-                telegram_id
-            )
+            user = await user_repo.get_by_telegram_id(telegram_id)
             if user is None:
                 return [
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text=(
-                            "🎮 No games yet. "
-                            "Add me to a group and use /start!"
+                            "🎮 No games yet. Add me to a group and use /start!"
                         ),
                     )
                 ]
 
-            hosted = (
-                await game_repo.get_hosted_with_player_counts(
-                    user.id
-                )
-            )
+            hosted = await game_repo.get_hosted_with_player_counts(user.id)
             if not hosted:
                 return [
                     _result(

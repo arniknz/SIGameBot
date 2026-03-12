@@ -61,9 +61,9 @@ class GameRepository:
         count_subq = (
             sqlalchemy.select(
                 game.models.ParticipantModel.game_id,
-                sqlalchemy.func.count(
-                    game.models.ParticipantModel.id
-                ).label("cnt"),
+                sqlalchemy.func.count(game.models.ParticipantModel.id).label(
+                    "cnt"
+                ),
             )
             .where(
                 game.models.ParticipantModel.is_active.is_(True),
@@ -95,8 +95,7 @@ class GameRepository:
         )
         rows = (await self._session.execute(statement)).all()
         return [
-            (game_model, int(player_count))
-            for game_model, player_count in rows
+            (game_model, int(player_count)) for game_model, player_count in rows
         ]
 
     async def is_host_anywhere(

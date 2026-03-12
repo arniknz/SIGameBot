@@ -24,57 +24,33 @@ def register(
         return bot.views.render_many(result)
 
     @router.command(game.constants.Command.JOIN)
-    async def cmd_join(
-        chat_id: int, telegram_id: int, username: str, **_
-    ):
-        result = await lobby.handle_join(
-            chat_id, telegram_id, username
-        )
+    async def cmd_join(chat_id: int, telegram_id: int, username: str, **_):
+        result = await lobby.handle_join(chat_id, telegram_id, username)
         return bot.views.render_many(result)
 
     @router.callback(game.constants.Callback.JOIN)
-    async def cb_join(
-        chat_id: int, telegram_id: int, username: str, **_
-    ):
-        result = await lobby.handle_join(
-            chat_id, telegram_id, username
-        )
+    async def cb_join(chat_id: int, telegram_id: int, username: str, **_):
+        result = await lobby.handle_join(chat_id, telegram_id, username)
         return bot.views.render_many(result)
 
     @router.command(game.constants.Command.SPECTATE)
-    async def cmd_spectate(
-        chat_id: int, telegram_id: int, username: str, **_
-    ):
-        result = await lobby.handle_spectate(
-            chat_id, telegram_id, username
-        )
+    async def cmd_spectate(chat_id: int, telegram_id: int, username: str, **_):
+        result = await lobby.handle_spectate(chat_id, telegram_id, username)
         return bot.views.render_many(result)
 
     @router.callback(game.constants.Callback.SPECTATE)
-    async def cb_spectate(
-        chat_id: int, telegram_id: int, username: str, **_
-    ):
-        result = await lobby.handle_spectate(
-            chat_id, telegram_id, username
-        )
+    async def cb_spectate(chat_id: int, telegram_id: int, username: str, **_):
+        result = await lobby.handle_spectate(chat_id, telegram_id, username)
         return bot.views.render_many(result)
 
     @router.command(game.constants.Command.LEAVE)
-    async def cmd_leave(
-        chat_id: int, telegram_id: int, username: str, **_
-    ):
-        result = await lobby.handle_leave(
-            chat_id, telegram_id, username
-        )
+    async def cmd_leave(chat_id: int, telegram_id: int, username: str, **_):
+        result = await lobby.handle_leave(chat_id, telegram_id, username)
         return bot.views.render_many(result)
 
     @router.callback(game.constants.Callback.LEAVE)
-    async def cb_leave(
-        chat_id: int, telegram_id: int, username: str, **_
-    ):
-        result = await lobby.handle_leave(
-            chat_id, telegram_id, username
-        )
+    async def cb_leave(chat_id: int, telegram_id: int, username: str, **_):
+        result = await lobby.handle_leave(chat_id, telegram_id, username)
         return bot.views.render_many(result)
 
     @router.command(game.constants.Command.STOP)

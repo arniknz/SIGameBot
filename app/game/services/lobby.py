@@ -45,21 +45,13 @@ class LobbyService:
             self._session_factory() as session,
             session.begin(),
         ):
-            game_repo = db.repositories.game.GameRepository(
-                session
-            )
-            user_repo = db.repositories.user.UserRepository(
-                session
-            )
+            game_repo = db.repositories.game.GameRepository(session)
+            user_repo = db.repositories.user.UserRepository(session)
             participant_repo = (
-                db.repositories.participant.ParticipantRepository(
-                    session
-                )
+                db.repositories.participant.ParticipantRepository(session)
             )
 
-            active_game = await game_repo.get_active_by_chat(
-                chat_id
-            )
+            active_game = await game_repo.get_active_by_chat(chat_id)
             if active_game is not None:
                 return [
                     _result(
@@ -68,12 +60,8 @@ class LobbyService:
                     )
                 ]
 
-            user = await user_repo.get_or_create(
-                telegram_id, username
-            )
-            new_game = await game_repo.create(
-                chat_id, host_id=user.id
-            )
+            user = await user_repo.get_or_create(telegram_id, username)
+            new_game = await game_repo.create(chat_id, host_id=user.id)
             await participant_repo.add(
                 new_game.id,
                 user.id,
@@ -353,9 +341,7 @@ class LobbyService:
     ) -> list[game.schemas.ServiceResponse]:
         participant.is_active = False
 
-        game_state = await game_repo.get_state_for_update(
-            active_game.id
-        )
+        game_state = await game_repo.get_state_for_update(active_game.id)
 
         if (
             game_state is not None
@@ -363,10 +349,7 @@ class LobbyService:
         ):
             game_state.buzzer_pressed_by = None
             game_state.buzzer_pressed_at = None
-            if (
-                game_state.status
-                == game.constants.GamePhase.WAITING_ANSWER
-            ):
+            if game_state.status == game.constants.GamePhase.WAITING_ANSWER:
                 game_state.timer_ends_at = None
 
         responses: list[game.schemas.ServiceResponse] = [
@@ -377,11 +360,7 @@ class LobbyService:
             ),
         ]
 
-        remaining = (
-            await participant_repo.get_active_players(
-                active_game.id
-            )
-        )
+        remaining = await participant_repo.get_active_players(active_game.id)
         if len(remaining) < 2:
             finish_responses = await self._finish_game(
                 session,
@@ -404,20 +383,12 @@ class LobbyService:
             )
             responses.extend(mid_turn)
 
-        if (
-            user
-            and user.id == active_game.host_id
-            and remaining
-        ):
+        if user and user.id == active_game.host_id and remaining:
             new_host = remaining[0]
             active_game.host_id = new_host.user_id
-            new_host_user = await user_repo.get_by_id(
-                new_host.user_id
-            )
+            new_host_user = await user_repo.get_by_id(new_host.user_id)
             new_host_name = (
-                new_host_user.username
-                if new_host_user
-                else "Unknown"
+                new_host_user.username if new_host_user else "Unknown"
             )
             responses.append(
                 _result(
@@ -440,9 +411,7 @@ class LobbyService:
         chat_id: int,
         username: str,
     ) -> list[game.schemas.ServiceResponse]:
-        next_player = await participant_repo.pick_random(
-            active_game.id
-        )
+        next_player = await participant_repo.pick_random(active_game.id)
         if next_player is not None:
             active_game.current_player_id = next_player.id
 
@@ -452,17 +421,11 @@ class LobbyService:
         ):
             return []
 
-        question_repo = (
-            db.repositories.question.QuestionRepository(session)
-        )
-        await self._burn_current_question(
-            question_repo, game_state
-        )
+        question_repo = db.repositories.question.QuestionRepository(session)
+        await self._burn_current_question(question_repo, game_state)
 
         now = datetime.datetime.now(datetime.UTC)
-        game_state.status = (
-            game.constants.GamePhase.CHOOSING_QUESTION
-        )
+        game_state.status = game.constants.GamePhase.CHOOSING_QUESTION
         game_state.current_question_id = None
         game_state.buzzer_pressed_by = None
         game_state.buzzer_pressed_at = None
@@ -470,17 +433,11 @@ class LobbyService:
             seconds=self._question_selection_timeout,
         )
 
-        pending_board = await question_repo.get_pending_board(
-            active_game.id
-        )
+        pending_board = await question_repo.get_pending_board(active_game.id)
         if not pending_board:
-            return await self._finish_game(
-                session, active_game, chat_id
-            )
+            return await self._finish_game(session, active_game, chat_id)
 
-        next_name = await game_repo.current_player_username(
-            active_game
-        )
+        next_name = await game_repo.current_player_username(active_game)
         return [
             _result(
                 chat_id,
@@ -498,10 +455,8 @@ class LobbyService:
     ) -> None:
         if game_state.current_question_id is None:
             return
-        detail = (
-            await question_repo.get_question_in_game_detail(
-                game_state.current_question_id,
-            )
+        detail = await question_repo.get_question_in_game_detail(
+            game_state.current_question_id,
         )
         if detail is None:
             return
@@ -513,9 +468,7 @@ class LobbyService:
             question_in_game.status = (
                 game.constants.QuestionInGameStatus.ANSWERED
             )
-            question_in_game.answered_at = (
-                datetime.datetime.now(datetime.UTC)
-            )
+            question_in_game.answered_at = datetime.datetime.now(datetime.UTC)
 
     async def handle_stop(
         self,

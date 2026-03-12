@@ -46,22 +46,12 @@ class GameplayService:
         telegram_id: int,
     ) -> list[game.schemas.ServiceResponse]:
         async with self._session_factory() as session, session.begin():
-            game_repo = db.repositories.game.GameRepository(
-                session
-            )
-            user_repo = db.repositories.user.UserRepository(
-                session
-            )
+            game_repo = db.repositories.game.GameRepository(session)
+            user_repo = db.repositories.user.UserRepository(session)
             participant_repo = (
-                db.repositories.participant.ParticipantRepository(
-                    session
-                )
+                db.repositories.participant.ParticipantRepository(session)
             )
-            question_repo = (
-                db.repositories.question.QuestionRepository(
-                    session
-                )
-            )
+            question_repo = db.repositories.question.QuestionRepository(session)
 
             error = await self._validate_start(
                 game_repo,
@@ -74,53 +64,35 @@ class GameplayService:
             if error is not None:
                 return error
 
-            active_game = await game_repo.get_active_by_chat(
-                chat_id
-            )
+            active_game = await game_repo.get_active_by_chat(chat_id)
             assert active_game is not None
-            all_question_ids = (
-                await question_repo.all_question_ids()
-            )
+            all_question_ids = await question_repo.all_question_ids()
 
             await question_repo.bulk_create_questions_in_game(
                 active_game.id,
                 all_question_ids,
             )
 
-            first_player = (
-                await participant_repo.pick_random(
-                    active_game.id
-                )
-            )
+            first_player = await participant_repo.pick_random(active_game.id)
             if first_player is None:
                 return []
-            active_game.status = (
-                game.constants.GameStatus.ACTIVE
-            )
+            active_game.status = game.constants.GameStatus.ACTIVE
             active_game.current_player_id = first_player.id
 
-            game_state = await game_repo.get_state(
-                active_game.id
-            )
+            game_state = await game_repo.get_state(active_game.id)
             if game_state is None:
                 return []
             now = datetime.datetime.now(datetime.UTC)
-            game_state.status = (
-                game.constants.GamePhase.CHOOSING_QUESTION
-            )
+            game_state.status = game.constants.GamePhase.CHOOSING_QUESTION
             game_state.timer_ends_at = now + datetime.timedelta(
                 seconds=self._question_selection_timeout,
             )
 
-            first_player_name = (
-                await game_repo.current_player_username(
-                    active_game
-                )
+            first_player_name = await game_repo.current_player_username(
+                active_game
             )
-            pending_board = (
-                await question_repo.get_pending_board(
-                    active_game.id
-                )
+            pending_board = await question_repo.get_pending_board(
+                active_game.id
             )
 
             logger.info(
@@ -137,9 +109,7 @@ class GameplayService:
                     intro="🎯 Game started! Let's go!",
                     current_player=first_player_name,
                     rows=pending_board,
-                    selection_timeout=(
-                        self._question_selection_timeout
-                    ),
+                    selection_timeout=(self._question_selection_timeout),
                 )
             ]
 
@@ -152,9 +122,7 @@ class GameplayService:
         chat_id: int,
         telegram_id: int,
     ) -> list[game.schemas.ServiceResponse] | None:
-        active_game = await game_repo.get_active_by_chat(
-            chat_id
-        )
+        active_game = await game_repo.get_active_by_chat(chat_id)
         if active_game is None:
             return [
                 _result(
@@ -163,10 +131,7 @@ class GameplayService:
                 )
             ]
 
-        if (
-            active_game.status
-            != game.constants.GameStatus.WAITING
-        ):
+        if active_game.status != game.constants.GameStatus.WAITING:
             return [
                 _result(
                     chat_id,
@@ -183,10 +148,8 @@ class GameplayService:
                 )
             ]
 
-        active_players = (
-            await participant_repo.get_active_players(
-                active_game.id
-            )
+        active_players = await participant_repo.get_active_players(
+            active_game.id
         )
         if len(active_players) < 2:
             return [
@@ -196,9 +159,7 @@ class GameplayService:
                 )
             ]
 
-        all_question_ids = (
-            await question_repo.all_question_ids()
-        )
+        all_question_ids = await question_repo.all_question_ids()
         if not all_question_ids:
             return [
                 _result(

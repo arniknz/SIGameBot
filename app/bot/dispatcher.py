@@ -59,9 +59,7 @@ class Dispatcher:
             return update.callback_query.message.chat.id
         return None
 
-    async def _handle_message(
-        self, update: clients.schemas.Update
-    ) -> None:
+    async def _handle_message(self, update: clients.schemas.Update) -> None:
         msg = update.message
         if not msg or not msg.text:
             return
@@ -95,22 +93,16 @@ class Dispatcher:
                 bot_username=self._tg.bot_username,
             )
             if not responses:
-                responses = self._chat_type_error(
-                    cmd, is_private, chat_id
-                )
+                responses = self._chat_type_error(cmd, is_private, chat_id)
             await self._send_responses(responses)
             return
 
         if not is_private:
-            responses = (
-                await self._gameplay.handle_possible_answer(
-                    chat_id, telegram_id, username, text
-                )
+            responses = await self._gameplay.handle_possible_answer(
+                chat_id, telegram_id, username, text
             )
             if responses:
-                await self._send_responses(
-                    bot.views.render_many(responses)
-                )
+                await self._send_responses(bot.views.render_many(responses))
 
     def _chat_type_error(
         self,
@@ -118,9 +110,7 @@ class Dispatcher:
         is_private: bool,
         chat_id: int,
     ) -> list[game.schemas.GameResponse]:
-        if not self._router.has_command(
-            cmd, private=not is_private
-        ):
+        if not self._router.has_command(cmd, private=not is_private):
             return []
         if is_private:
             sr = game.schemas.ServiceResponse(
@@ -131,9 +121,7 @@ class Dispatcher:
             sr = game.schemas.ServiceResponse(
                 chat_id=chat_id,
                 view=game.constants.ViewName.PRIVATE_ONLY_COMMAND,
-                payload={
-                    "bot_username": self._tg.bot_username
-                },
+                payload={"bot_username": self._tg.bot_username},
             )
         return [bot.views.render(sr)]
 
@@ -172,9 +160,7 @@ class Dispatcher:
         text: str,
     ) -> list[game.schemas.GameResponse]:
         if text.startswith("/"):
-            cmd = self._strip_mention(
-                text.split(maxsplit=1)[0]
-            ).lower()
+            cmd = self._strip_mention(text.split(maxsplit=1)[0]).lower()
             if cmd in (
                 f"/{game.constants.Command.CANCEL}",
                 f"/{game.constants.Command.DONE}",
@@ -207,9 +193,7 @@ class Dispatcher:
         step = state.step
 
         if step == game.constants.DialogStep.AWAIT_TOPIC_NAME:
-            return await self._dialog_topic_name(
-                telegram_id, chat_id, text
-            )
+            return await self._dialog_topic_name(telegram_id, chat_id, text)
 
         if step == game.constants.DialogStep.AWAIT_QUESTION_TEXT:
             state.question_text = text

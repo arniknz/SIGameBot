@@ -206,9 +206,7 @@ def my_games_jump_buttons(
     for i, g in enumerate(games, 1):
         url = _supergroup_url(int(str(g["chat_id"])))
         if url:
-            kb.append(
-                [{"text": f"🔗 Jump to game #{i}", "url": url}]
-            )
+            kb.append([{"text": f"🔗 Jump to game #{i}", "url": url}])
     return kb
 
 
