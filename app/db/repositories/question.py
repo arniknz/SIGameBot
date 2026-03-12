@@ -126,6 +126,48 @@ class QuestionRepository:
             rows,
         )
 
+    async def get_random_pending(
+        self,
+        game_id: uuid.UUID,
+    ) -> (
+        sqlalchemy.Row[
+            tuple[
+                game.models.QuestionInGameModel,
+                str,
+                str,
+                str,
+                int,
+            ]
+        ]
+        | None
+    ):
+        statement = (
+            sqlalchemy.select(
+                game.models.QuestionInGameModel,
+                game.models.TopicModel.title,
+                game.models.QuestionModel.text,
+                game.models.QuestionModel.answer,
+                game.models.QuestionModel.cost,
+            )
+            .join(
+                game.models.QuestionModel,
+                game.models.QuestionInGameModel.question_id
+                == game.models.QuestionModel.id,
+            )
+            .join(
+                game.models.TopicModel,
+                game.models.QuestionModel.topic_id == game.models.TopicModel.id,
+            )
+            .where(
+                game.models.QuestionInGameModel.game_id == game_id,
+                game.models.QuestionInGameModel.status
+                == game.constants.QuestionInGameStatus.PENDING,
+            )
+            .order_by(sqlalchemy.func.random())
+            .limit(1)
+        )
+        return (await self._session.execute(statement)).one_or_none()
+
     async def get_pending_board(
         self,
         game_id: uuid.UUID,

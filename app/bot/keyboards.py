@@ -43,6 +43,17 @@ def buzzer() -> list[list[dict[str, str]]]:
     ]
 
 
+def all_in() -> list[list[dict[str, str]]]:
+    return [
+        [
+            {
+                "text": "⚡ ALL-IN",
+                "callback_data": game.constants.Callback.ALL_IN,
+            }
+        ]
+    ]
+
+
 def score() -> list[list[dict[str, str]]]:
     return [
         [
@@ -77,6 +88,15 @@ def board(
                 }
             )
         kb.append(row)
+    if rows:
+        kb.append(
+            [
+                {
+                    "text": "🎲 Cat in a Bag",
+                    "callback_data": game.constants.Callback.CAT_IN_BAG,
+                }
+            ]
+        )
     return kb
 
 
