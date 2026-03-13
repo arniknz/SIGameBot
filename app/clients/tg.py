@@ -166,6 +166,22 @@ class TgClient:
             },
         )
 
+    async def edit_message_text(
+        self,
+        chat_id: int,
+        message_id: int,
+        text: str,
+        buttons: list[list[dict[str, str]]] | None = None,
+    ) -> dict[str, typing.Any]:
+        payload: dict[str, typing.Any] = {
+            "chat_id": chat_id,
+            "message_id": message_id,
+            "text": text,
+        }
+        if buttons is not None:
+            payload["reply_markup"] = {"inline_keyboard": buttons}
+        return await self._post("editMessageText", payload)
+
     async def answer_callback(
         self,
         callback_query_id: str,

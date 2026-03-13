@@ -27,6 +27,16 @@ class UserModel(Base):
     username: sqlalchemy.orm.Mapped[str | None] = sqlalchemy.orm.mapped_column(
         sqlalchemy.String(255),
     )
+    balance: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Integer,
+        default=0,
+        server_default="0",
+    )
+    last_daily_claim: sqlalchemy.orm.Mapped[datetime.datetime | None] = (
+        sqlalchemy.orm.mapped_column(
+            sqlalchemy.DateTime(timezone=True),
+        )
+    )
     created_at: sqlalchemy.orm.Mapped[datetime.datetime] = (
         sqlalchemy.orm.mapped_column(
             sqlalchemy.DateTime(timezone=True),

@@ -47,6 +47,61 @@ class QuestionRepository:
                 .where(game.models.QuestionModel.topic_id == topic_id),
             )
         ).scalar_one()
+
+        question_ids_stmt = sqlalchemy.select(
+            game.models.QuestionModel.id
+        ).where(game.models.QuestionModel.topic_id == topic_id)
+        question_ids = [
+            row[0]
+            for row in (
+                await self._session.execute(question_ids_stmt)
+            ).all()
+        ]
+
+        if question_ids:
+            qig_ids_stmt = sqlalchemy.select(
+                game.models.QuestionInGameModel.id
+            ).where(
+                game.models.QuestionInGameModel.question_id.in_(question_ids),
+            )
+            qig_ids = [
+                row[0]
+                for row in (
+                    await self._session.execute(qig_ids_stmt)
+                ).all()
+            ]
+            if qig_ids:
+                await self._session.execute(
+                    sqlalchemy.delete(
+                        game.models.GameItemUsageModel
+                    ).where(
+                        game.models.GameItemUsageModel.question_in_game_id.in_(
+                            qig_ids
+                        ),
+                    )
+                )
+                await self._session.execute(
+                    sqlalchemy.update(game.models.GameStateModel)
+                    .where(
+                        game.models.GameStateModel.current_question_id.in_(
+                            qig_ids
+                        ),
+                    )
+                    .values(current_question_id=None)
+                )
+            await self._session.execute(
+                sqlalchemy.delete(game.models.QuestionInGameModel).where(
+                    game.models.QuestionInGameModel.question_id.in_(
+                        question_ids
+                    ),
+                )
+            )
+            await self._session.execute(
+                sqlalchemy.delete(game.models.QuestionModel).where(
+                    game.models.QuestionModel.topic_id == topic_id,
+                )
+            )
+
         await self._session.execute(
             sqlalchemy.delete(game.models.TopicModel).where(
                 game.models.TopicModel.id == topic_id
@@ -91,6 +146,39 @@ class QuestionRepository:
         self,
         question_id: uuid.UUID,
     ) -> bool:
+        qig_ids_stmt = sqlalchemy.select(
+            game.models.QuestionInGameModel.id
+        ).where(
+            game.models.QuestionInGameModel.question_id == question_id,
+        )
+        qig_ids = [
+            row[0]
+            for row in (await self._session.execute(qig_ids_stmt)).all()
+        ]
+
+        if qig_ids:
+            await self._session.execute(
+                sqlalchemy.delete(game.models.GameItemUsageModel).where(
+                    game.models.GameItemUsageModel.question_in_game_id.in_(
+                        qig_ids
+                    ),
+                )
+            )
+            await self._session.execute(
+                sqlalchemy.update(game.models.GameStateModel)
+                .where(
+                    game.models.GameStateModel.current_question_id.in_(
+                        qig_ids
+                    ),
+                )
+                .values(current_question_id=None)
+            )
+            await self._session.execute(
+                sqlalchemy.delete(game.models.QuestionInGameModel).where(
+                    game.models.QuestionInGameModel.question_id == question_id,
+                )
+            )
+
         result = await self._session.execute(
             sqlalchemy.delete(game.models.QuestionModel).where(
                 game.models.QuestionModel.id == question_id
@@ -235,6 +323,22 @@ class QuestionRepository:
             .where(game.models.QuestionInGameModel.id == question_in_game_id)
         )
         return (await self._session.execute(statement)).one_or_none()
+
+    async def get_answered_in_game(
+        self,
+        game_id: uuid.UUID,
+    ) -> list[game.models.QuestionInGameModel]:
+        statement = (
+            sqlalchemy.select(game.models.QuestionInGameModel)
+            .where(
+                game.models.QuestionInGameModel.game_id == game_id,
+                game.models.QuestionInGameModel.status
+                == game.constants.QuestionInGameStatus.ANSWERED,
+            )
+        )
+        return list(
+            (await self._session.execute(statement)).scalars().all()
+        )
 
     async def topics_with_question_counts(
         self,

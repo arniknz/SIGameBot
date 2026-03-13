@@ -140,6 +140,7 @@ class Dispatcher:
 
         data = cb.data or ""
         chat_id = cb.message.chat.id if cb.message else 0
+        message_id = cb.message.message_id if cb.message else 0
         telegram_id = cb.from_user.id
         username = cb.from_user.first_name
         if not chat_id:
@@ -150,6 +151,8 @@ class Dispatcher:
             chat_id=chat_id,
             telegram_id=telegram_id,
             username=username,
+            bot_username=self._tg.bot_username,
+            message_id=message_id,
         )
         await self._send_responses(responses)
 
@@ -285,7 +288,16 @@ class Dispatcher:
     ) -> None:
         tasks = []
         for resp in responses:
-            if resp.keyboard:
+            if resp.edit_message_id:
+                tasks.append(
+                    self._tg.edit_message_text(
+                        resp.chat_id,
+                        resp.edit_message_id,
+                        resp.text,
+                        buttons=resp.keyboard,
+                    )
+                )
+            elif resp.keyboard:
                 tasks.append(
                     self._tg.send_keyboard(
                         resp.chat_id, resp.text, resp.keyboard

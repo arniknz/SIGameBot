@@ -14,8 +14,9 @@ def register(
     router: bot.router.Router,
     content: game.services.ContentService,
     dialog: bot.dialog.DialogManager,
+    shop: game.services.ShopService | None = None,
 ) -> None:
-    _register_commands(router, content, dialog)
+    _register_commands(router, content, dialog, shop)
     _register_callbacks(router, content, dialog)
 
 
@@ -23,9 +24,15 @@ def _register_commands(
     router: bot.router.Router,
     content: game.services.ContentService,
     dialog: bot.dialog.DialogManager,
+    shop: game.services.ShopService | None = None,
 ) -> None:
     @router.command(game.constants.Command.START, private=True)
-    async def cmd_private_start(chat_id: int, **_):
+    async def cmd_private_start(
+        chat_id: int, telegram_id: int, args: str = "", **_
+    ):
+        if args == "shop" and shop is not None:
+            result = await shop.handle_shop_main(chat_id, telegram_id)
+            return bot.views.render_many(result)
         result = await content.handle_help(chat_id)
         return bot.views.render_many(result)
 

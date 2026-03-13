@@ -11,6 +11,7 @@ class GameResponse:
     chat_id: int
     text: str
     keyboard: list[list[dict[str, str]]] | None = None
+    edit_message_id: int | None = None
 
 
 @dataclasses.dataclass
@@ -18,6 +19,7 @@ class ServiceResponse:
     chat_id: int
     view: ViewName
     payload: dict[str, typing.Any] = dataclasses.field(default_factory=dict)
+    edit_message_id: int | None = None
 
 
 @dataclasses.dataclass
