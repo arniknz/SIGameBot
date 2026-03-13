@@ -217,14 +217,22 @@ class GameplayService:
             game_state.buzzer_pressed_by = participant.id
             game_state.buzzer_pressed_at = now
             game_state.status = game.constants.GamePhase.WAITING_ANSWER
+            game_state.all_in_active = False
             game_state.timer_ends_at = now + datetime.timedelta(
                 seconds=self._answer_timeout,
             )
 
+            show_all_in = False
+            if not participant.all_in_used:
+                max_score = await participant_repo.get_max_score(active_game.id)
+                if max_score > 0 and participant.score < max_score / 2:
+                    show_all_in = True
+
             logger.info(
-                "%s pressed buzzer in game %s",
+                "%s pressed buzzer in game %s (all_in_eligible=%s)",
                 username,
                 active_game.id,
+                show_all_in,
             )
 
             return [
@@ -233,6 +241,103 @@ class GameplayService:
                     game.constants.ViewName.BUZZER_PRESSED,
                     username=username,
                     answer_timeout=self._answer_timeout,
+                    show_all_in=show_all_in,
+                )
+            ]
+
+    async def handle_cat_in_bag(
+        self,
+        chat_id: int,
+        telegram_id: int,
+    ) -> list[game.schemas.ServiceResponse]:
+        async with self._session_factory() as session, session.begin():
+            game_repo = db.repositories.game.GameRepository(session)
+            participant_repo = (
+                db.repositories.participant.ParticipantRepository(session)
+            )
+            question_repo = db.repositories.question.QuestionRepository(session)
+
+            active_game = await game_repo.get_active_by_chat(chat_id)
+            if (
+                active_game is None
+                or active_game.status != game.constants.GameStatus.ACTIVE
+            ):
+                return []
+
+            game_state = await game_repo.get_state_for_update(active_game.id)
+            if (
+                game_state is None
+                or game_state.status
+                != game.constants.GamePhase.CHOOSING_QUESTION
+            ):
+                return []
+
+            participant = await participant_repo.get_by_telegram_id(
+                active_game.id,
+                telegram_id,
+            )
+            if (
+                participant is None
+                or participant.id != active_game.current_player_id
+            ):
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.NOT_YOUR_TURN,
+                    )
+                ]
+
+            detail = await question_repo.get_random_pending(active_game.id)
+            if detail is None:
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="🎲 No questions left in the bag!",
+                    )
+                ]
+
+            (
+                question_in_game,
+                topic_title,
+                question_text,
+                _answer,
+                _original_cost,
+            ) = detail
+
+            cat_cost = random.choice([100, 200, 300])
+
+            now = datetime.datetime.now(datetime.UTC)
+            question_in_game.status = game.constants.QuestionInGameStatus.ASKED
+            question_in_game.asked_by = participant.id
+            question_in_game.asked_at = now
+
+            game_state.status = game.constants.GamePhase.WAITING_BUZZER
+            game_state.current_question_id = question_in_game.id
+            game_state.buzzer_pressed_by = None
+            game_state.buzzer_pressed_at = None
+            game_state.cost_override = cat_cost
+            game_state.timer_ends_at = now + datetime.timedelta(
+                seconds=self._buzzer_timeout,
+            )
+            game_state.updated_at = now
+
+            logger.info(
+                "🎲 Cat in a Bag: [%s] %s (%d pts) in game %s",
+                topic_title,
+                question_text[:50],
+                cat_cost,
+                active_game.id,
+            )
+
+            return [
+                _result(
+                    chat_id,
+                    game.constants.ViewName.CAT_REVEALED,
+                    topic=topic_title,
+                    cost=cat_cost,
+                    text=question_text,
+                    buzzer_timeout=self._buzzer_timeout,
                 )
             ]
 
@@ -310,6 +415,7 @@ class GameplayService:
             game_state.current_question_id = question_in_game.id
             game_state.buzzer_pressed_by = None
             game_state.buzzer_pressed_at = None
+            game_state.cost_override = None
             game_state.timer_ends_at = now + datetime.timedelta(
                 seconds=self._buzzer_timeout,
             )
@@ -499,6 +605,73 @@ class GameplayService:
                 )
             ]
 
+    async def handle_all_in(
+        self,
+        chat_id: int,
+        telegram_id: int,
+        username: str,
+    ) -> list[game.schemas.ServiceResponse]:
+        async with self._session_factory() as session, session.begin():
+            game_repo = db.repositories.game.GameRepository(session)
+            participant_repo = (
+                db.repositories.participant.ParticipantRepository(session)
+            )
+
+            active_game = await game_repo.get_active_by_chat(chat_id)
+            if (
+                active_game is None
+                or active_game.status != game.constants.GameStatus.ACTIVE
+            ):
+                return []
+
+            game_state = await game_repo.get_state_for_update(active_game.id)
+            if (
+                game_state is None
+                or game_state.status != game.constants.GamePhase.WAITING_ANSWER
+            ):
+                return []
+
+            participant = await participant_repo.get_by_telegram_id(
+                active_game.id,
+                telegram_id,
+            )
+            if (
+                participant is None
+                or participant.id != game_state.buzzer_pressed_by
+            ):
+                return []
+
+            if participant.all_in_used or game_state.all_in_active:
+                return []
+
+            game_state.all_in_active = True
+
+            effective_cost = game_state.cost_override or 0
+            if effective_cost == 0 and game_state.current_question_id:
+                question_repo = db.repositories.question.QuestionRepository(
+                    session
+                )
+                detail = await question_repo.get_question_in_game_detail(
+                    game_state.current_question_id,
+                )
+                if detail is not None:
+                    effective_cost = detail[4]
+
+            logger.info(
+                "⚡ %s activated ALL-IN in game %s",
+                username,
+                active_game.id,
+            )
+
+            return [
+                _result(
+                    chat_id,
+                    game.constants.ViewName.ALL_IN_ACTIVATED,
+                    username=username,
+                    cost=effective_cost,
+                )
+            ]
+
     async def _process_answer(
         self,
         session: sqlalchemy.ext.asyncio.AsyncSession,
@@ -536,8 +709,11 @@ class GameplayService:
             _topic_title,
             _question_text,
             correct_answer,
-            cost,
+            original_cost,
         ) = detail
+
+        effective_cost = game_state.cost_override or original_cost
+        is_all_in = game_state.all_in_active
 
         now = datetime.datetime.now(datetime.UTC)
         is_correct = (
@@ -555,7 +731,7 @@ class GameplayService:
             if eff == game.constants.ItemEffect.FORCE_CORRECT:
                 is_correct = True
             elif eff == game.constants.ItemEffect.DOUBLE_POINTS:
-                cost *= 2
+                effective_cost *= 2
 
         responses: list[game.schemas.ServiceResponse] = []
 
@@ -575,7 +751,8 @@ class GameplayService:
         )
 
         if is_correct:
-            buzzer_participant.score += cost
+            points = effective_cost * 2 if is_all_in else effective_cost
+            buzzer_participant.score += points
             active_game.current_player_id = buzzer_participant.id
             question_in_game.status = (
                 game.constants.QuestionInGameStatus.ANSWERED
@@ -587,7 +764,7 @@ class GameplayService:
                     chat_id,
                     game.constants.ViewName.ANSWER_CORRECT,
                     username=username,
-                    cost=cost,
+                    cost=points,
                     correct_answer=correct_answer,
                 ),
             )
@@ -620,7 +797,7 @@ class GameplayService:
             ]
             if opponents:
                 victim = random.choice(opponents)
-                victim.score -= cost
+                victim.score -= effective_cost
                 victim_user = await db.repositories.user.UserRepository(
                     session
                 ).get_by_id(victim.user_id)
@@ -632,7 +809,7 @@ class GameplayService:
                         chat_id,
                         game.constants.ViewName.ANSWER_WRONG,
                         username=username,
-                        cost=cost,
+                        cost=effective_cost,
                         correct_answer=(
                             f"{correct_answer}\n"
                             f"🪞 Penalty transferred to {victim_name}!"
@@ -640,13 +817,13 @@ class GameplayService:
                     ),
                 )
             else:
-                buzzer_participant.score -= cost
+                buzzer_participant.score -= effective_cost
                 responses.append(
                     _result(
                         chat_id,
                         game.constants.ViewName.ANSWER_WRONG,
                         username=username,
-                        cost=cost,
+                        cost=effective_cost,
                         correct_answer=correct_answer,
                     ),
                 )
@@ -673,7 +850,10 @@ class GameplayService:
                 ),
             )
         else:
-            buzzer_participant.score -= cost
+            if is_all_in:
+                buzzer_participant.score = 0
+            else:
+                buzzer_participant.score -= effective_cost
             question_in_game.status = (
                 game.constants.QuestionInGameStatus.ANSWERED
             )
@@ -684,13 +864,19 @@ class GameplayService:
                     chat_id,
                     game.constants.ViewName.ANSWER_WRONG,
                     username=username,
-                    cost=cost,
+                    cost=effective_cost,
                     correct_answer=correct_answer,
                 ),
             )
 
         if has_become_chooser and not is_correct:
             active_game.current_player_id = buzzer_participant.id
+
+        if is_all_in:
+            buzzer_participant.all_in_used = True
+
+        game_state.cost_override = None
+        game_state.all_in_active = False
 
         round_responses = await self._next_round_or_finish(
             session,
@@ -738,6 +924,8 @@ class GameplayService:
         game_state.current_question_id = None
         game_state.buzzer_pressed_by = None
         game_state.buzzer_pressed_at = None
+        game_state.cost_override = None
+        game_state.all_in_active = False
         game_state.timer_ends_at = now + datetime.timedelta(
             seconds=self._question_selection_timeout,
         )

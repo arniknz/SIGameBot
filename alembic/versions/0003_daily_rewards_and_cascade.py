@@ -1,7 +1,7 @@
 """add daily rewards and cascade FK constraints
 
 Revision ID: 0003
-Revises: 0002
+Revises: 0002a
 Create Date: 2026-03-13
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision = "0003"
-down_revision = "0002"
+down_revision = "0002a"
 branch_labels = None
 depends_on = None
 

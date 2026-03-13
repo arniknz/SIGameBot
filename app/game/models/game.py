@@ -111,6 +111,10 @@ class ParticipantModel(Base):
         sqlalchemy.Boolean,
         default=True,
     )
+    all_in_used: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean,
+        default=False,
+    )
 
     user: sqlalchemy.orm.Mapped[UserModel] = sqlalchemy.orm.relationship(
         back_populates="participants",
@@ -159,6 +163,15 @@ class GameStateModel(Base):
         sqlalchemy.orm.mapped_column(
             sqlalchemy.DateTime(timezone=True),
         )
+    )
+    cost_override: sqlalchemy.orm.Mapped[int | None] = (
+        sqlalchemy.orm.mapped_column(
+            sqlalchemy.Integer,
+        )
+    )
+    all_in_active: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean,
+        default=False,
     )
     updated_at: sqlalchemy.orm.Mapped[datetime.datetime] = (
         sqlalchemy.orm.mapped_column(
