@@ -4,10 +4,22 @@ import uuid
 
 import game.constants
 import game.models
+import game.shop_items
 import sqlalchemy
 
 
-def lobby() -> list[list[dict[str, str]]]:
+def lobby(bot_username: str = "") -> list[list[dict[str, str]]]:
+    shop_btn: dict[str, str]
+    if bot_username:
+        shop_btn = {
+            "text": "🛒 Shop",
+            "url": f"https://t.me/{bot_username}?start=shop",
+        }
+    else:
+        shop_btn = {
+            "text": "🛒 Shop",
+            "callback_data": game.constants.Callback.SHOP,
+        }
     return [
         [
             {
@@ -20,6 +32,7 @@ def lobby() -> list[list[dict[str, str]]]:
             },
         ],
         [
+            shop_btn,
             {
                 "text": "📖 Rules",
                 "callback_data": game.constants.Callback.RULES,
@@ -38,6 +51,17 @@ def buzzer() -> list[list[dict[str, str]]]:
             {
                 "text": "🔔 Buzzer",
                 "callback_data": game.constants.Callback.BUZZER,
+            }
+        ]
+    ]
+
+
+def buzzer_with_inventory() -> list[list[dict[str, str]]]:
+    return [
+        [
+            {
+                "text": "📦 Inventory",
+                "callback_data": game.constants.Callback.INVENTORY,
             }
         ]
     ]
@@ -238,4 +262,90 @@ def question_select_for_delete(
             }
         ]
     )
+    return kb
+
+
+def shop_main() -> list[list[dict[str, str]]]:
+    kb: list[list[dict[str, str]]] = []
+    for cat in game.constants.ShopCategory:
+        label = game.shop_items.CATEGORY_LABELS.get(cat, cat.value.title())
+        kb.append(
+            [
+                {
+                    "text": label,
+                    "callback_data": (
+                        f"{game.constants.CallbackPrefix.SHOP_CATEGORY}"
+                        f":{cat.value}"
+                    ),
+                }
+            ]
+        )
+    return kb
+
+
+def shop_category(
+    items: list[game.shop_items.ShopItemDef],
+    balance: int,
+) -> list[list[dict[str, str]]]:
+    kb: list[list[dict[str, str]]] = []
+    for item in items:
+        affordable = "✅" if balance >= item.price else "❌"
+        kb.append(
+            [
+                {
+                    "text": (
+                        f"{item.emoji} {item.name} — "
+                        f"{item.price}💰 {affordable}"
+                    ),
+                    "callback_data": (
+                        f"{game.constants.CallbackPrefix.SHOP_BUY}"
+                        f":{item.id}"
+                    ),
+                }
+            ]
+        )
+    kb.append(
+        [
+            {
+                "text": "⬅️ Back to shop",
+                "callback_data": game.constants.Callback.SHOP,
+            }
+        ]
+    )
+    return kb
+
+
+def shop_redirect_button(
+    bot_username: str,
+) -> list[list[dict[str, str]]]:
+    return [
+        [
+            {
+                "text": "🛒 Open Shop",
+                "url": f"https://t.me/{bot_username}?start=shop",
+            }
+        ]
+    ]
+
+
+def inventory_items(
+    items: list[dict],
+) -> list[list[dict[str, str]]]:
+    kb: list[list[dict[str, str]]] = []
+    for item in items:
+        count_label = f" x{item['count']}" if item["count"] > 1 else ""
+        kb.append(
+            [
+                {
+                    "text": (
+                        f"{item['emoji']} {item['name']}"
+                        f"{count_label}"
+                    ),
+                    "callback_data": (
+                        f"{game.constants.CallbackPrefix.INV_USE}"
+                        f":{item['item_id']}"
+                    ),
+                }
+            ]
+        )
     return kb

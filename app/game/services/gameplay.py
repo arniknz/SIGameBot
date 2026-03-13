@@ -2,15 +2,18 @@ from __future__ import annotations
 
 import datetime
 import logging
+import random
 import uuid
 
 import db.repositories.game
 import db.repositories.participant
 import db.repositories.question
+import db.repositories.shop
 import db.repositories.user
 import game.constants
 import game.models
 import game.schemas
+import game.shop_items
 import sqlalchemy
 import sqlalchemy.ext.asyncio
 
@@ -320,7 +323,7 @@ class GameplayService:
                 active_game.id,
             )
 
-            return [
+            responses: list[game.schemas.ServiceResponse] = [
                 _result(
                     chat_id,
                     game.constants.ViewName.QUESTION_ASKED,
@@ -330,6 +333,49 @@ class GameplayService:
                     buzzer_timeout=self._buzzer_timeout,
                 )
             ]
+
+            shop_repo = db.repositories.shop.ShopRepository(session)
+            auto_buzzers = await shop_repo.get_all_pending_auto_buzzers(
+                active_game.id,
+            )
+            if auto_buzzers:
+                ab = auto_buzzers[0]
+                ab.question_in_game_id = question_in_game.id
+                ab_participant = (
+                    await participant_repo.get_active_player_by_id(
+                        active_game.id, ab.participant_id
+                    )
+                )
+                if ab_participant and ab_participant.is_active:
+                    user_repo = db.repositories.user.UserRepository(session)
+                    ab_user = await user_repo.get_by_id(
+                        ab_participant.user_id
+                    )
+                    ab_name = ab_user.username if ab_user else "Unknown"
+
+                    game_state.buzzer_pressed_by = ab_participant.id
+                    game_state.buzzer_pressed_at = now
+                    game_state.status = (
+                        game.constants.GamePhase.WAITING_ANSWER
+                    )
+                    game_state.timer_ends_at = now + datetime.timedelta(
+                        seconds=self._answer_timeout,
+                    )
+                    responses.append(
+                        _result(
+                            chat_id,
+                            game.constants.ViewName.BUZZER_PRESSED,
+                            username=f"⚡ {ab_name} (auto)",
+                            answer_timeout=self._answer_timeout,
+                        )
+                    )
+                    logger.info(
+                        "Auto-buzzer triggered for %s in game %s",
+                        ab_name,
+                        active_game.id,
+                    )
+
+            return responses
 
     @staticmethod
     async def _validate_question_selection(
@@ -498,16 +544,44 @@ class GameplayService:
             answer_text.strip().lower() == correct_answer.strip().lower()
         )
 
+        effects = await self._get_active_effects(
+            session,
+            active_game.id,
+            buzzer_participant.id,
+            game_state.current_question_id,
+        )
+
+        for eff in effects:
+            if eff == game.constants.ItemEffect.FORCE_CORRECT:
+                is_correct = True
+            elif eff == game.constants.ItemEffect.DOUBLE_POINTS:
+                cost *= 2
+
         responses: list[game.schemas.ServiceResponse] = []
 
-        question_in_game.status = game.constants.QuestionInGameStatus.ANSWERED
-        question_in_game.answered_by = buzzer_participant.id
-        question_in_game.answered_at = now
         game_state.timer_ends_at = None
+
+        has_no_penalty = (
+            game.constants.ItemEffect.NO_PENALTY in effects
+        )
+        has_pass_on_wrong = (
+            game.constants.ItemEffect.PASS_ON_WRONG in effects
+        )
+        has_transfer_penalty = (
+            game.constants.ItemEffect.TRANSFER_PENALTY in effects
+        )
+        has_become_chooser = (
+            game.constants.ItemEffect.BECOME_CHOOSER in effects
+        )
 
         if is_correct:
             buzzer_participant.score += cost
             active_game.current_player_id = buzzer_participant.id
+            question_in_game.status = (
+                game.constants.QuestionInGameStatus.ANSWERED
+            )
+            question_in_game.answered_by = buzzer_participant.id
+            question_in_game.answered_at = now
             responses.append(
                 _result(
                     chat_id,
@@ -517,8 +591,94 @@ class GameplayService:
                     correct_answer=correct_answer,
                 ),
             )
+        elif has_pass_on_wrong:
+            question_in_game.status = (
+                game.constants.QuestionInGameStatus.PENDING
+            )
+            question_in_game.asked_by = None
+            question_in_game.asked_at = None
+            question_in_game.answered_by = None
+            question_in_game.answered_at = None
+            responses.append(
+                _result(
+                    chat_id,
+                    game.constants.ViewName.ANSWER_WRONG,
+                    username=username,
+                    cost=0,
+                    correct_answer="(💀 question returned to board)",
+                ),
+            )
+        elif has_transfer_penalty:
+            participant_repo = (
+                db.repositories.participant.ParticipantRepository(session)
+            )
+            players = await participant_repo.get_active_players(
+                active_game.id
+            )
+            opponents = [
+                p for p in players if p.id != buzzer_participant.id
+            ]
+            if opponents:
+                victim = random.choice(opponents)
+                victim.score -= cost
+                victim_user = await db.repositories.user.UserRepository(
+                    session
+                ).get_by_id(victim.user_id)
+                victim_name = (
+                    victim_user.username if victim_user else "someone"
+                )
+                responses.append(
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.ANSWER_WRONG,
+                        username=username,
+                        cost=cost,
+                        correct_answer=(
+                            f"{correct_answer}\n"
+                            f"🪞 Penalty transferred to {victim_name}!"
+                        ),
+                    ),
+                )
+            else:
+                buzzer_participant.score -= cost
+                responses.append(
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.ANSWER_WRONG,
+                        username=username,
+                        cost=cost,
+                        correct_answer=correct_answer,
+                    ),
+                )
+            question_in_game.status = (
+                game.constants.QuestionInGameStatus.ANSWERED
+            )
+            question_in_game.answered_by = buzzer_participant.id
+            question_in_game.answered_at = now
+        elif has_no_penalty:
+            question_in_game.status = (
+                game.constants.QuestionInGameStatus.ANSWERED
+            )
+            question_in_game.answered_by = buzzer_participant.id
+            question_in_game.answered_at = now
+            responses.append(
+                _result(
+                    chat_id,
+                    game.constants.ViewName.ANSWER_WRONG,
+                    username=username,
+                    cost=0,
+                    correct_answer=(
+                        f"{correct_answer}\n🛡️ Shield absorbed the penalty!"
+                    ),
+                ),
+            )
         else:
             buzzer_participant.score -= cost
+            question_in_game.status = (
+                game.constants.QuestionInGameStatus.ANSWERED
+            )
+            question_in_game.answered_by = buzzer_participant.id
+            question_in_game.answered_at = now
             responses.append(
                 _result(
                     chat_id,
@@ -529,6 +689,9 @@ class GameplayService:
                 ),
             )
 
+        if has_become_chooser and not is_correct:
+            active_game.current_player_id = buzzer_participant.id
+
         round_responses = await self._next_round_or_finish(
             session,
             active_game,
@@ -537,6 +700,24 @@ class GameplayService:
         )
         responses.extend(round_responses)
         return responses
+
+    @staticmethod
+    async def _get_active_effects(
+        session: sqlalchemy.ext.asyncio.AsyncSession,
+        game_id: uuid.UUID,
+        participant_id: uuid.UUID,
+        question_in_game_id: uuid.UUID,
+    ) -> set[game.constants.ItemEffect]:
+        shop_repo = db.repositories.shop.ShopRepository(session)
+        usages = await shop_repo.get_active_effects(
+            game_id, participant_id, question_in_game_id
+        )
+        effects: set[game.constants.ItemEffect] = set()
+        for usage in usages:
+            item_def = game.shop_items.ITEMS_BY_ID.get(usage.item_id)
+            if item_def:
+                effects.add(item_def.effect)
+        return effects
 
     async def _next_round_or_finish(
         self,
@@ -591,6 +772,9 @@ class GameplayService:
         if game_state:
             game_state.status = game.constants.GamePhase.FINISHED
             game_state.timer_ends_at = None
+
+        shop_repo = db.repositories.shop.ShopRepository(session)
+        await shop_repo.apply_game_scores_to_balances(active_game.id)
 
         scoreboard_data = await game_repo.scoreboard(
             active_game.id, active_only=False

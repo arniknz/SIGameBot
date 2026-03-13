@@ -6,6 +6,7 @@ import logging
 import db.repositories.game
 import db.repositories.participant
 import db.repositories.question
+import db.repositories.shop
 import db.repositories.user
 import game.constants
 import game.models
@@ -517,6 +518,9 @@ class LobbyService:
         if game_state:
             game_state.status = game.constants.GamePhase.FINISHED
             game_state.timer_ends_at = None
+
+        shop_repo = db.repositories.shop.ShopRepository(session)
+        await shop_repo.apply_game_scores_to_balances(active_game.id)
 
         scoreboard_data = await game_repo.scoreboard(
             active_game.id, active_only=False
