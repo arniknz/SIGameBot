@@ -31,8 +31,8 @@ def _make(
 
 
 def _render_game_created(cid: int, p: _P) -> game.schemas.GameResponse:
-    kb = bot.keyboards.lobby()
-    bot_username = p.get("bot_username")
+    bot_username = p.get("bot_username", "")
+    kb = bot.keyboards.lobby(bot_username)
     if bot_username:
         kb.append(bot.keyboards.dm_bot_button(bot_username))
     return _make(
@@ -289,7 +289,9 @@ def _render_help(cid: int, _p: _P) -> game.schemas.GameResponse:
             "  /add_topic <name> — Create a topic\n"
             "  /add_question — Add a question\n"
             "  /delete_topic — Delete a topic\n"
-            "  /delete_question — Delete a question\n\n"
+            "  /delete_question — Delete a question\n"
+            "  /shop — Browse the item shop\n"
+            "  /balance — Check your balance\n\n"
             "ℹ️ Available Everywhere:\n"
             "  /help — This message\n"
             "  /rules — Game rules\n\n"
@@ -365,6 +367,156 @@ def _render_private_only_command(cid: int, p: _P) -> game.schemas.GameResponse:
             ]
         ]
     return _make(cid, text, keyboard=kb)
+
+
+def _render_shop_redirect(cid: int, p: _P) -> game.schemas.GameResponse:
+    bot_username = p.get("bot_username", "")
+    return _make(
+        cid,
+        "🛒 Open the shop in a private chat to browse items!",
+        keyboard=bot.keyboards.shop_redirect_button(bot_username)
+        if bot_username
+        else None,
+    )
+
+
+def _render_shop_main(cid: int, p: _P) -> game.schemas.GameResponse:
+    balance = p["balance"]
+    item_count = p.get("item_count", 0)
+    return _make(
+        cid,
+        (
+            f"🛒 Welcome to the Shop!\n\n"
+            f"💰 Your balance: {balance} pts\n"
+            f"📦 Items in inventory: {item_count}\n\n"
+            f"Choose a category:"
+        ),
+        keyboard=bot.keyboards.shop_main(),
+    )
+
+
+def _render_shop_category(cid: int, p: _P) -> game.schemas.GameResponse:
+    import game.shop_items
+
+    category = p["category"]
+    items = p["items"]
+    balance = p["balance"]
+    label = game.shop_items.CATEGORY_LABELS.get(
+        category, str(category).title()
+    )
+
+    lines = [f"{label}\n"]
+    for item in items:
+        lines.append(
+            f"{item.emoji} {item.name} — {item.price}💰\n"
+            f"    {item.description}"
+        )
+    lines.append(f"\n💰 Your balance: {balance} pts")
+
+    return _make(
+        cid,
+        "\n".join(lines),
+        keyboard=bot.keyboards.shop_category(items, balance),
+    )
+
+
+def _render_shop_buy_ok(cid: int, p: _P) -> game.schemas.GameResponse:
+    item = p["item"]
+    new_balance = p["new_balance"]
+    return _make(
+        cid,
+        (
+            f"✅ Purchased {item.emoji} {item.name}!\n\n"
+            f"💰 Remaining balance: {new_balance} pts"
+        ),
+        keyboard=bot.keyboards.shop_main(),
+    )
+
+
+def _render_shop_insufficient(cid: int, p: _P) -> game.schemas.GameResponse:
+    item = p["item"]
+    balance = p["balance"]
+    return _make(
+        cid,
+        (
+            f"❌ Not enough balance!\n\n"
+            f"{item.emoji} {item.name} costs {item.price}💰\n"
+            f"💰 Your balance: {balance} pts\n"
+            f"📉 Need {item.price - balance} more pts"
+        ),
+        keyboard=bot.keyboards.shop_main(),
+    )
+
+
+def _render_inventory_list(cid: int, p: _P) -> game.schemas.GameResponse:
+    items = p["items"]
+    remaining = p.get("remaining_seconds", 0)
+    lines = [f"📦 Your Inventory (⏱ {remaining}s remaining)\n"]
+    for item in items:
+        count = f" x{item['count']}" if item["count"] > 1 else ""
+        lines.append(
+            f"{item['emoji']} {item['name']}{count}"
+            f" — {item['description']}"
+        )
+    lines.append("\nTap an item to use it:")
+    return _make(
+        cid,
+        "\n".join(lines),
+        keyboard=bot.keyboards.inventory_items(items),
+    )
+
+
+def _render_inventory_empty(cid: int, _p: _P) -> game.schemas.GameResponse:
+    return _make(
+        cid,
+        "📦 Your inventory is empty! Visit /shop to buy items.\n\nType your answer now!",
+        keyboard=bot.keyboards.buzzer_with_inventory(),
+    )
+
+
+def _render_item_used(cid: int, p: _P) -> game.schemas.GameResponse:
+    return _make(cid, p["text"])
+
+
+def _render_item_used_group(cid: int, p: _P) -> game.schemas.GameResponse:
+    emoji = p["emoji"]
+    name = p["name"]
+    remaining = p.get("remaining_seconds", 0)
+    effect_text = p.get("effect_text", "")
+    text = effect_text if effect_text else f"✨ {emoji} {name} was used!"
+    text += f"\n⏱ {remaining}s remaining"
+    return _make(
+        cid,
+        text,
+        keyboard=bot.keyboards.buzzer_with_inventory(),
+    )
+
+
+def _render_balance_info(cid: int, p: _P) -> game.schemas.GameResponse:
+    balance = p["balance"]
+    item_count = p.get("item_count", 0)
+    return _make(
+        cid,
+        (
+            f"💰 Balance: {balance} pts\n"
+            f"📦 Items: {item_count}"
+        ),
+    )
+
+
+def _render_daily_reward_claimed(
+    cid: int, p: _P
+) -> game.schemas.GameResponse:
+    amount = p["amount"]
+    new_balance = p["new_balance"]
+    return _make(
+        cid,
+        (
+            f"🎁 Daily reward claimed!\n\n"
+            f"💰 +{amount} pts\n"
+            f"💰 New balance: {new_balance} pts"
+        ),
+    )
 
 
 _SIMPLE_VIEWS: dict[game.constants.ViewName, str] = {
@@ -447,9 +599,9 @@ _RENDERERS: dict[game.constants.ViewName, Renderer] = {
     game.constants.ViewName.SCOREBOARD: _render_scoreboard,
     game.constants.ViewName.BOARD: _render_board,
     game.constants.ViewName.QUESTION_ASKED: _render_question_asked,
-    game.constants.ViewName.CAT_REVEALED: _render_cat_revealed,
+    game.constants.ViewName.CAT_REVEALED: _render_cat_revealed,  # pyright: ignore[reportAttributeAccessIssue]
     game.constants.ViewName.BUZZER_PRESSED: _render_buzzer_pressed,
-    game.constants.ViewName.ALL_IN_ACTIVATED: _render_all_in_activated,
+    game.constants.ViewName.ALL_IN_ACTIVATED: _render_all_in_activated,  # pyright: ignore[reportAttributeAccessIssue]
     game.constants.ViewName.ANSWER_CORRECT: _render_answer_correct,
     game.constants.ViewName.ANSWER_WRONG: _render_answer_wrong,
     game.constants.ViewName.BUZZER_TIMEOUT: _render_buzzer_timeout,
@@ -473,6 +625,19 @@ _RENDERERS: dict[game.constants.ViewName, Renderer] = {
     game.constants.ViewName.PRIVATE_ONLY_COMMAND: (
         _render_private_only_command
     ),
+    game.constants.ViewName.SHOP_REDIRECT: _render_shop_redirect,  # pyright: ignore[reportAttributeAccessIssue]
+    game.constants.ViewName.SHOP_MAIN: _render_shop_main,  # pyright: ignore[reportAttributeAccessIssue]
+    game.constants.ViewName.SHOP_CATEGORY: _render_shop_category,  # pyright: ignore[reportAttributeAccessIssue]
+    game.constants.ViewName.SHOP_BUY_OK: _render_shop_buy_ok,  # pyright: ignore[reportAttributeAccessIssue]
+    game.constants.ViewName.SHOP_INSUFFICIENT: _render_shop_insufficient,  # pyright: ignore[reportAttributeAccessIssue]
+    game.constants.ViewName.INVENTORY_LIST: _render_inventory_list,  # pyright: ignore[reportAttributeAccessIssue]
+    game.constants.ViewName.INVENTORY_EMPTY: _render_inventory_empty,  # pyright: ignore[reportAttributeAccessIssue]
+    game.constants.ViewName.ITEM_USED: _render_item_used,  # pyright: ignore[reportAttributeAccessIssue]
+    game.constants.ViewName.ITEM_USED_GROUP: _render_item_used_group,  # pyright: ignore[reportAttributeAccessIssue]
+    game.constants.ViewName.BALANCE_INFO: _render_balance_info,  # pyright: ignore[reportAttributeAccessIssue]
+    game.constants.ViewName.DAILY_REWARD_CLAIMED: (  # pyright: ignore[reportAttributeAccessIssue]
+        _render_daily_reward_claimed
+    ),
 }
 
 
@@ -485,17 +650,20 @@ def render(
 
     renderer = _RENDERERS.get(view)
     if renderer is not None:
-        return renderer(cid, p)
+        result = renderer(cid, p)
+    elif view == game.constants.ViewName.PLAIN:
+        result = _make(cid, p["text"])
+    else:
+        simple_text = _SIMPLE_VIEWS.get(view)
+        if simple_text is not None:
+            result = _make(cid, simple_text)
+        else:
+            username_template = _USERNAME_VIEWS.get(view)
+            if username_template is not None:
+                result = _render_simple_with_username(cid, p, username_template)
+            else:
+                result = _make(cid, "⚠️ Something unexpected happened.")
 
-    if view == game.constants.ViewName.PLAIN:
-        return _make(cid, p["text"])
-
-    simple_text = _SIMPLE_VIEWS.get(view)
-    if simple_text is not None:
-        return _make(cid, simple_text)
-
-    username_template = _USERNAME_VIEWS.get(view)
-    if username_template is not None:
-        return _render_simple_with_username(cid, p, username_template)
-
-    return _make(cid, "⚠️ Something unexpected happened.")
+    if response.edit_message_id is not None:
+        result.edit_message_id = response.edit_message_id
+    return result

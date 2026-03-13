@@ -51,6 +51,7 @@ class Bot:
             session_factory,
             question_selection_timeout=cfg.question_selection_timeout,
         )
+        self._shop = game.services.ShopService(session_factory)
         self._dialog = bot.dialog.DialogManager()
 
         router = bot.handlers.create_router(
@@ -58,6 +59,7 @@ class Bot:
             gameplay=self._gameplay,
             content=self._content,
             dialog=self._dialog,
+            shop=self._shop,
         )
         self._dispatcher = bot.dispatcher.Dispatcher(
             tg=self._tg,
@@ -105,7 +107,16 @@ class Bot:
     ) -> None:
         tasks = []
         for response in responses:
-            if response.keyboard:
+            if response.edit_message_id:
+                tasks.append(
+                    self._tg.edit_message_text(
+                        response.chat_id,
+                        response.edit_message_id,
+                        response.text,
+                        buttons=response.keyboard,
+                    )
+                )
+            elif response.keyboard:
                 tasks.append(
                     self._tg.send_keyboard(
                         response.chat_id,
