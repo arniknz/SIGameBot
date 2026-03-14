@@ -3,7 +3,6 @@ from __future__ import annotations
 import datetime
 import logging
 import random
-import uuid
 
 import db.repositories.game
 import db.repositories.participant
@@ -261,8 +260,7 @@ class ShopService:
             game_state = await game_repo.get_state(active_game.id)
             if (
                 game_state is None
-                or game_state.status
-                != game.constants.GamePhase.WAITING_ANSWER
+                or game_state.status != game.constants.GamePhase.WAITING_ANSWER
             ):
                 return []
 
@@ -291,9 +289,7 @@ class ShopService:
 
             item_counts: dict[int, int] = {}
             for inv in inventory:
-                item_counts[inv.item_id] = (
-                    item_counts.get(inv.item_id, 0) + 1
-                )
+                item_counts[inv.item_id] = item_counts.get(inv.item_id, 0) + 1
 
             items_display: list[dict] = []
             for item_id, count in sorted(item_counts.items()):
@@ -314,9 +310,7 @@ class ShopService:
                 now = datetime.datetime.now(datetime.UTC)
                 remaining_seconds = max(
                     0,
-                    int(
-                        (game_state.timer_ends_at - now).total_seconds()
-                    ),
+                    int((game_state.timer_ends_at - now).total_seconds()),
                 )
 
             return [
@@ -381,9 +375,7 @@ class ShopService:
                     )
                 ]
 
-            game_data = await self._find_buzzer_game(
-                session, telegram_id
-            )
+            game_data = await self._find_buzzer_game(session, telegram_id)
             if game_data is None:
                 return [
                     _result(
@@ -414,9 +406,7 @@ class ShopService:
                 now = datetime.datetime.now(datetime.UTC)
                 remaining_seconds = max(
                     0,
-                    int(
-                        (game_state.timer_ends_at - now).total_seconds()
-                    ),
+                    int((game_state.timer_ends_at - now).total_seconds()),
                 )
 
             effect = game.constants.ItemEffect(item_def.effect)
@@ -467,8 +457,7 @@ class ShopService:
             )
             .join(
                 game.models.GameStateModel,
-                game.models.GameStateModel.game_id
-                == game.models.GameModel.id,
+                game.models.GameStateModel.game_id == game.models.GameModel.id,
             )
             .join(
                 game.models.ParticipantModel,
@@ -522,8 +511,8 @@ class ShopService:
 
         elif effect == game.constants.ItemEffect.REVEAL_HINT:
             if game_state.current_question_id:
-                question_repo = (
-                    db.repositories.question.QuestionRepository(session)
+                question_repo = db.repositories.question.QuestionRepository(
+                    session
                 )
                 detail = await question_repo.get_question_in_game_detail(
                     game_state.current_question_id,
@@ -553,8 +542,8 @@ class ShopService:
 
         elif effect == game.constants.ItemEffect.REVEAL_ANSWER:
             if game_state.current_question_id:
-                question_repo = (
-                    db.repositories.question.QuestionRepository(session)
+                question_repo = db.repositories.question.QuestionRepository(
+                    session
                 )
                 detail = await question_repo.get_question_in_game_detail(
                     game_state.current_question_id,
@@ -592,12 +581,8 @@ class ShopService:
             participant_repo = (
                 db.repositories.participant.ParticipantRepository(session)
             )
-            players = await participant_repo.get_active_players(
-                active_game.id
-            )
-            opponents = [
-                p for p in players if p.id != participant.id
-            ]
+            players = await participant_repo.get_active_players(active_game.id)
+            opponents = [p for p in players if p.id != participant.id]
             if opponents:
                 victim = random.choice(opponents)
                 victim.score -= game.shop_items.STEAL_AMOUNT
@@ -605,9 +590,7 @@ class ShopService:
                 victim_user = await db.repositories.user.UserRepository(
                     session
                 ).get_by_id(victim.user_id)
-                victim_name = (
-                    victim_user.username if victim_user else "someone"
-                )
+                victim_name = victim_user.username if victim_user else "someone"
                 effect_text = (
                     f"{item_def.emoji} Stole "
                     f"{game.shop_items.STEAL_AMOUNT} points "
@@ -615,22 +598,20 @@ class ShopService:
                 )
 
         elif effect == game.constants.ItemEffect.HIDE_SCORE:
-            effect_text = (
-                f"{item_def.emoji} Your score is now hidden!"
-            )
+            effect_text = f"{item_def.emoji} Your score is now hidden!"
 
         elif effect == game.constants.ItemEffect.REPLACE_QUESTION:
             if game_state.current_question_id:
-                question_repo = (
-                    db.repositories.question.QuestionRepository(session)
+                question_repo = db.repositories.question.QuestionRepository(
+                    session
                 )
                 old_qig = await question_repo.get_question_in_game_detail(
                     game_state.current_question_id,
                 )
                 if old_qig:
-                    old_qig[0].status = (
-                        game.constants.QuestionInGameStatus.PENDING
-                    )
+                    old_qig[
+                        0
+                    ].status = game.constants.QuestionInGameStatus.PENDING
                     old_qig[0].asked_by = None
                     old_qig[0].asked_at = None
 
@@ -650,9 +631,7 @@ class ShopService:
                             game.constants.QuestionInGameStatus.ASKED
                         )
                         new_qig.asked_by = participant.id
-                        new_qig.asked_at = datetime.datetime.now(
-                            datetime.UTC
-                        )
+                        new_qig.asked_at = datetime.datetime.now(datetime.UTC)
                         game_state.current_question_id = new_qig.id
                         effect_text = (
                             f"{item_def.emoji} Question replaced!\n"
@@ -661,17 +640,11 @@ class ShopService:
                         )
 
         elif effect == game.constants.ItemEffect.RESURRECT_QUESTION:
-            question_repo = db.repositories.question.QuestionRepository(
-                session
-            )
-            answered = await question_repo.get_answered_in_game(
-                active_game.id
-            )
+            question_repo = db.repositories.question.QuestionRepository(session)
+            answered = await question_repo.get_answered_in_game(active_game.id)
             if answered:
                 revived = random.choice(answered)
-                revived.status = (
-                    game.constants.QuestionInGameStatus.PENDING
-                )
+                revived.status = game.constants.QuestionInGameStatus.PENDING
                 revived.answered_by = None
                 revived.answered_at = None
                 effect_text = (
@@ -679,18 +652,14 @@ class ShopService:
                 )
 
         elif effect == game.constants.ItemEffect.OPEN_ANY:
-            question_repo = db.repositories.question.QuestionRepository(
-                session
-            )
+            question_repo = db.repositories.question.QuestionRepository(session)
             pending_board = await question_repo.get_pending_board(
                 active_game.id
             )
             if pending_board:
                 new_qig_id = random.choice(pending_board)[0]
-                new_detail = (
-                    await question_repo.get_question_in_game_detail(
-                        new_qig_id
-                    )
+                new_detail = await question_repo.get_question_in_game_detail(
+                    new_qig_id
                 )
                 if new_detail:
                     effect_text = (
