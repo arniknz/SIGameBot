@@ -32,5 +32,28 @@ services:
     volumes:
       - ./logs:/opt/logs
 
+  admin_api:
+    build:
+      context: .
+      network: host
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      ADMIN_API_PORT: ${ADMIN_API_PORT:-8000}
+    command:
+      [
+        "uvicorn",
+        "web.api.main:app",
+        "--host", "0.0.0.0",
+        "--port", "${ADMIN_API_PORT:-8000}",
+      ]
+
 volumes:
   pgdata:

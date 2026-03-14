@@ -24,6 +24,10 @@ class Config:
     log_level: str = "INFO"
     log_file: str = "logs/bot.log"
 
+    admin_username: str = "admin"
+    admin_password: str = "admin"
+    admin_api_port: int = 8000
+
     @property
     def db_url(self) -> str:
         return (
@@ -54,4 +58,7 @@ class Config:
             answer_timeout=int(os.getenv("ANSWER_TIMEOUT", "15")),
             log_level=os.getenv("LOG_LEVEL", "INFO"),
             log_file=os.getenv("LOG_FILE", "logs/bot.log"),
+            admin_username=os.getenv("ADMIN_USERNAME", "admin"),
+            admin_password=os.getenv("ADMIN_PASSWORD", "admin"),
+            admin_api_port=int(os.getenv("ADMIN_API_PORT", "8000")),
         )

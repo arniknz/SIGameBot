@@ -6,6 +6,7 @@ import typing
 import bot.keyboards
 import game.constants
 import game.schemas
+import game.shop_items
 
 type _P = dict[str, typing.Any]
 
@@ -396,20 +397,15 @@ def _render_shop_main(cid: int, p: _P) -> game.schemas.GameResponse:
 
 
 def _render_shop_category(cid: int, p: _P) -> game.schemas.GameResponse:
-    import game.shop_items
-
     category = p["category"]
     items = p["items"]
     balance = p["balance"]
-    label = game.shop_items.CATEGORY_LABELS.get(
-        category, str(category).title()
-    )
+    label = game.shop_items.CATEGORY_LABELS.get(category, str(category).title())
 
     lines = [f"{label}\n"]
     for item in items:
         lines.append(
-            f"{item.emoji} {item.name} — {item.price}💰\n"
-            f"    {item.description}"
+            f"{item.emoji} {item.name} — {item.price}💰\n    {item.description}"
         )
     lines.append(f"\n💰 Your balance: {balance} pts")
 
@@ -455,8 +451,7 @@ def _render_inventory_list(cid: int, p: _P) -> game.schemas.GameResponse:
     for item in items:
         count = f" x{item['count']}" if item["count"] > 1 else ""
         lines.append(
-            f"{item['emoji']} {item['name']}{count}"
-            f" — {item['description']}"
+            f"{item['emoji']} {item['name']}{count} — {item['description']}"
         )
     lines.append("\nTap an item to use it:")
     return _make(
@@ -469,7 +464,8 @@ def _render_inventory_list(cid: int, p: _P) -> game.schemas.GameResponse:
 def _render_inventory_empty(cid: int, _p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
-        "📦 Your inventory is empty! Visit /shop to buy items.\n\nType your answer now!",
+        "📦 Your inventory is empty! Visit /shop to buy items."
+        "\n\nType your answer now!",
         keyboard=bot.keyboards.buzzer_with_inventory(),
     )
 
@@ -497,16 +493,11 @@ def _render_balance_info(cid: int, p: _P) -> game.schemas.GameResponse:
     item_count = p.get("item_count", 0)
     return _make(
         cid,
-        (
-            f"💰 Balance: {balance} pts\n"
-            f"📦 Items: {item_count}"
-        ),
+        (f"💰 Balance: {balance} pts\n📦 Items: {item_count}"),
     )
 
 
-def _render_daily_reward_claimed(
-    cid: int, p: _P
-) -> game.schemas.GameResponse:
+def _render_daily_reward_claimed(cid: int, p: _P) -> game.schemas.GameResponse:
     amount = p["amount"]
     new_balance = p["new_balance"]
     return _make(
@@ -599,9 +590,9 @@ _RENDERERS: dict[game.constants.ViewName, Renderer] = {
     game.constants.ViewName.SCOREBOARD: _render_scoreboard,
     game.constants.ViewName.BOARD: _render_board,
     game.constants.ViewName.QUESTION_ASKED: _render_question_asked,
-    game.constants.ViewName.CAT_REVEALED: _render_cat_revealed,  # pyright: ignore[reportAttributeAccessIssue]
+    game.constants.ViewName.CAT_REVEALED: _render_cat_revealed,
     game.constants.ViewName.BUZZER_PRESSED: _render_buzzer_pressed,
-    game.constants.ViewName.ALL_IN_ACTIVATED: _render_all_in_activated,  # pyright: ignore[reportAttributeAccessIssue]
+    game.constants.ViewName.ALL_IN_ACTIVATED: _render_all_in_activated,
     game.constants.ViewName.ANSWER_CORRECT: _render_answer_correct,
     game.constants.ViewName.ANSWER_WRONG: _render_answer_wrong,
     game.constants.ViewName.BUZZER_TIMEOUT: _render_buzzer_timeout,
@@ -625,19 +616,17 @@ _RENDERERS: dict[game.constants.ViewName, Renderer] = {
     game.constants.ViewName.PRIVATE_ONLY_COMMAND: (
         _render_private_only_command
     ),
-    game.constants.ViewName.SHOP_REDIRECT: _render_shop_redirect,  # pyright: ignore[reportAttributeAccessIssue]
-    game.constants.ViewName.SHOP_MAIN: _render_shop_main,  # pyright: ignore[reportAttributeAccessIssue]
-    game.constants.ViewName.SHOP_CATEGORY: _render_shop_category,  # pyright: ignore[reportAttributeAccessIssue]
-    game.constants.ViewName.SHOP_BUY_OK: _render_shop_buy_ok,  # pyright: ignore[reportAttributeAccessIssue]
-    game.constants.ViewName.SHOP_INSUFFICIENT: _render_shop_insufficient,  # pyright: ignore[reportAttributeAccessIssue]
-    game.constants.ViewName.INVENTORY_LIST: _render_inventory_list,  # pyright: ignore[reportAttributeAccessIssue]
-    game.constants.ViewName.INVENTORY_EMPTY: _render_inventory_empty,  # pyright: ignore[reportAttributeAccessIssue]
-    game.constants.ViewName.ITEM_USED: _render_item_used,  # pyright: ignore[reportAttributeAccessIssue]
-    game.constants.ViewName.ITEM_USED_GROUP: _render_item_used_group,  # pyright: ignore[reportAttributeAccessIssue]
-    game.constants.ViewName.BALANCE_INFO: _render_balance_info,  # pyright: ignore[reportAttributeAccessIssue]
-    game.constants.ViewName.DAILY_REWARD_CLAIMED: (  # pyright: ignore[reportAttributeAccessIssue]
-        _render_daily_reward_claimed
-    ),
+    game.constants.ViewName.SHOP_REDIRECT: _render_shop_redirect,
+    game.constants.ViewName.SHOP_MAIN: _render_shop_main,
+    game.constants.ViewName.SHOP_CATEGORY: _render_shop_category,
+    game.constants.ViewName.SHOP_BUY_OK: _render_shop_buy_ok,
+    game.constants.ViewName.SHOP_INSUFFICIENT: _render_shop_insufficient,
+    game.constants.ViewName.INVENTORY_LIST: _render_inventory_list,
+    game.constants.ViewName.INVENTORY_EMPTY: _render_inventory_empty,
+    game.constants.ViewName.ITEM_USED: _render_item_used,
+    game.constants.ViewName.ITEM_USED_GROUP: _render_item_used_group,
+    game.constants.ViewName.BALANCE_INFO: _render_balance_info,
+    game.constants.ViewName.DAILY_REWARD_CLAIMED: _render_daily_reward_claimed,
 }
 
 

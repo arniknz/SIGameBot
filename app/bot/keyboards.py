@@ -318,8 +318,7 @@ def shop_category(
                         f"{item.price}💰 {affordable}"
                     ),
                     "callback_data": (
-                        f"{game.constants.CallbackPrefix.SHOP_BUY}"
-                        f":{item.id}"
+                        f"{game.constants.CallbackPrefix.SHOP_BUY}:{item.id}"
                     ),
                 }
             ]
@@ -357,10 +356,7 @@ def inventory_items(
         kb.append(
             [
                 {
-                    "text": (
-                        f"{item['emoji']} {item['name']}"
-                        f"{count_label}"
-                    ),
+                    "text": (f"{item['emoji']} {item['name']}{count_label}"),
                     "callback_data": (
                         f"{game.constants.CallbackPrefix.INV_USE}"
                         f":{item['item_id']}"

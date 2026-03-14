@@ -33,9 +33,7 @@ class ShopRepository:
             )
             .order_by(game.models.UserInventoryModel.purchased_at)
         )
-        return list(
-            (await self._session.execute(statement)).scalars().all()
-        )
+        return list((await self._session.execute(statement)).scalars().all())
 
     async def get_unused_inventory_by_item(
         self,
@@ -123,15 +121,12 @@ class ShopRepository:
             )
             .where(
                 game.models.GameItemUsageModel.game_id == game_id,
-                game.models.GameItemUsageModel.participant_id
-                == participant_id,
+                game.models.GameItemUsageModel.participant_id == participant_id,
                 game.models.GameItemUsageModel.question_in_game_id
                 == question_in_game_id,
             )
         )
-        return list(
-            (await self._session.execute(statement)).scalars().all()
-        )
+        return list((await self._session.execute(statement)).scalars().all())
 
     async def get_pending_auto_buzzer(
         self,
@@ -150,8 +145,7 @@ class ShopRepository:
             sqlalchemy.select(game.models.GameItemUsageModel)
             .where(
                 game.models.GameItemUsageModel.game_id == game_id,
-                game.models.GameItemUsageModel.participant_id
-                == participant_id,
+                game.models.GameItemUsageModel.participant_id == participant_id,
                 game.models.GameItemUsageModel.item_id == auto_buzzer_id,
                 game.models.GameItemUsageModel.question_in_game_id.is_(None),
             )
@@ -181,9 +175,7 @@ class ShopRepository:
             .order_by(game.models.GameItemUsageModel.used_at)
             .limit(1)
         )
-        return list(
-            (await self._session.execute(statement)).scalars().all()
-        )
+        return list((await self._session.execute(statement)).scalars().all())
 
     async def apply_game_scores_to_balances(
         self,
@@ -245,11 +237,8 @@ class ShopRepository:
             .select_from(game.models.GameItemUsageModel)
             .where(
                 game.models.GameItemUsageModel.game_id == game_id,
-                game.models.GameItemUsageModel.participant_id
-                == participant_id,
+                game.models.GameItemUsageModel.participant_id == participant_id,
                 game.models.GameItemUsageModel.item_id == hide_id,
             )
         )
         return (await self._session.execute(statement)).scalar_one() > 0
-
-

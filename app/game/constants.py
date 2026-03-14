@@ -54,27 +54,31 @@ class ItemEffect(enum.StrEnum):
     BECOME_CHOOSER = "become_chooser"
 
 
-IMMEDIATE_EFFECTS: frozenset[ItemEffect] = frozenset({
-    ItemEffect.EXTRA_TIME,
-    ItemEffect.REVEAL_HINT,
-    ItemEffect.REVEAL_ANSWER,
-    ItemEffect.REPLACE_QUESTION,
-    ItemEffect.RESURRECT_QUESTION,
-    ItemEffect.OPEN_ANY,
-    ItemEffect.BONUS_POINTS,
-    ItemEffect.STEAL_POINTS,
-    ItemEffect.HIDE_SCORE,
-})
+IMMEDIATE_EFFECTS: frozenset[ItemEffect] = frozenset(
+    {
+        ItemEffect.EXTRA_TIME,
+        ItemEffect.REVEAL_HINT,
+        ItemEffect.REVEAL_ANSWER,
+        ItemEffect.REPLACE_QUESTION,
+        ItemEffect.RESURRECT_QUESTION,
+        ItemEffect.OPEN_ANY,
+        ItemEffect.BONUS_POINTS,
+        ItemEffect.STEAL_POINTS,
+        ItemEffect.HIDE_SCORE,
+    }
+)
 
-DEFERRED_EFFECTS: frozenset[ItemEffect] = frozenset({
-    ItemEffect.DOUBLE_POINTS,
-    ItemEffect.NO_PENALTY,
-    ItemEffect.PASS_ON_WRONG,
-    ItemEffect.FORCE_CORRECT,
-    ItemEffect.TRANSFER_PENALTY,
-    ItemEffect.BECOME_CHOOSER,
-    ItemEffect.AUTO_BUZZER,
-})
+DEFERRED_EFFECTS: frozenset[ItemEffect] = frozenset(
+    {
+        ItemEffect.DOUBLE_POINTS,
+        ItemEffect.NO_PENALTY,
+        ItemEffect.PASS_ON_WRONG,
+        ItemEffect.FORCE_CORRECT,
+        ItemEffect.TRANSFER_PENALTY,
+        ItemEffect.BECOME_CHOOSER,
+        ItemEffect.AUTO_BUZZER,
+    }
+)
 
 DAILY_REWARD_AMOUNT: int = 100
 
