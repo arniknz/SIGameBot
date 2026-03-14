@@ -447,23 +447,17 @@ class GameplayService:
             if auto_buzzers:
                 ab = auto_buzzers[0]
                 ab.question_in_game_id = question_in_game.id
-                ab_participant = (
-                    await participant_repo.get_active_player_by_id(
-                        active_game.id, ab.participant_id
-                    )
+                ab_participant = await participant_repo.get_active_player_by_id(
+                    active_game.id, ab.participant_id
                 )
                 if ab_participant and ab_participant.is_active:
                     user_repo = db.repositories.user.UserRepository(session)
-                    ab_user = await user_repo.get_by_id(
-                        ab_participant.user_id
-                    )
+                    ab_user = await user_repo.get_by_id(ab_participant.user_id)
                     ab_name = ab_user.username if ab_user else "Unknown"
 
                     game_state.buzzer_pressed_by = ab_participant.id
                     game_state.buzzer_pressed_at = now
-                    game_state.status = (
-                        game.constants.GamePhase.WAITING_ANSWER
-                    )
+                    game_state.status = game.constants.GamePhase.WAITING_ANSWER
                     game_state.timer_ends_at = now + datetime.timedelta(
                         seconds=self._answer_timeout,
                     )
@@ -737,18 +731,12 @@ class GameplayService:
 
         game_state.timer_ends_at = None
 
-        has_no_penalty = (
-            game.constants.ItemEffect.NO_PENALTY in effects
-        )
-        has_pass_on_wrong = (
-            game.constants.ItemEffect.PASS_ON_WRONG in effects
-        )
+        has_no_penalty = game.constants.ItemEffect.NO_PENALTY in effects
+        has_pass_on_wrong = game.constants.ItemEffect.PASS_ON_WRONG in effects
         has_transfer_penalty = (
             game.constants.ItemEffect.TRANSFER_PENALTY in effects
         )
-        has_become_chooser = (
-            game.constants.ItemEffect.BECOME_CHOOSER in effects
-        )
+        has_become_chooser = game.constants.ItemEffect.BECOME_CHOOSER in effects
 
         if is_correct:
             points = effective_cost * 2 if is_all_in else effective_cost
@@ -789,21 +777,15 @@ class GameplayService:
             participant_repo = (
                 db.repositories.participant.ParticipantRepository(session)
             )
-            players = await participant_repo.get_active_players(
-                active_game.id
-            )
-            opponents = [
-                p for p in players if p.id != buzzer_participant.id
-            ]
+            players = await participant_repo.get_active_players(active_game.id)
+            opponents = [p for p in players if p.id != buzzer_participant.id]
             if opponents:
                 victim = random.choice(opponents)
                 victim.score -= effective_cost
                 victim_user = await db.repositories.user.UserRepository(
                     session
                 ).get_by_id(victim.user_id)
-                victim_name = (
-                    victim_user.username if victim_user else "someone"
-                )
+                victim_name = victim_user.username if victim_user else "someone"
                 responses.append(
                     _result(
                         chat_id,

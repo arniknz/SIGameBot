@@ -43,9 +43,7 @@ def _register_callbacks(
         if is_private:
             result = await shop.handle_shop_main(chat_id, telegram_id)
         else:
-            result = await shop.handle_shop_redirect(
-                chat_id, bot_username
-            )
+            result = await shop.handle_shop_redirect(chat_id, bot_username)
         return bot.views.render_many(result)
 
     @router.callback(game.constants.Callback.INVENTORY)
@@ -83,9 +81,7 @@ def _register_callbacks(
         result = await shop.handle_buy(chat_id, telegram_id, item_id_str)
         return bot.views.render_many(result)
 
-    @router.callback_pattern(
-        rf"^{game.constants.CallbackPrefix.INV_USE}:(.+)$"
-    )
+    @router.callback_pattern(rf"^{game.constants.CallbackPrefix.INV_USE}:(.+)$")
     async def cb_inv_use(
         match: re.Match[str],
         chat_id: int,

@@ -136,7 +136,10 @@ class Dispatcher:
         cb = update.callback_query
         if not cb:
             return
-        await self._tg.answer_callback(cb.id)
+        try:
+            await self._tg.answer_callback(cb.id)
+        except Exception:
+            logger.debug("answerCallbackQuery failed (stale query), proceeding")
 
         data = cb.data or ""
         chat_id = cb.message.chat.id if cb.message else 0
