@@ -31,9 +31,11 @@ class TimerService:
         self,
         session_factory: sqlalchemy.ext.asyncio.async_sessionmaker,
         question_selection_timeout: int = 30,
+        max_failed_selections: int = 3,
     ) -> None:
         self._session_factory = session_factory
         self._question_selection_timeout = question_selection_timeout
+        self._max_failed_selections = max_failed_selections
         self._recovery_counter = 0
 
     async def check_timers(
@@ -110,6 +112,26 @@ class TimerService:
 
         old_player_name = await game_repo.current_player_username(active_game)
 
+        game_state.failed_selections_count += 1
+
+        if game_state.failed_selections_count >= self._max_failed_selections:
+            logger.warning(
+                "Game %s auto-ending: %d consecutive failed selections",
+                active_game.id,
+                game_state.failed_selections_count,
+            )
+            responses: list[game.schemas.ServiceResponse] = [
+                _result(
+                    chat_id,
+                    game.constants.ViewName.GAME_ENDED_AFK,
+                    failed_count=game_state.failed_selections_count,
+                ),
+            ]
+            responses.extend(
+                await self._finish_game(session, active_game, chat_id)
+            )
+            return responses
+
         next_player = await participant_repo.pick_random(
             active_game.id,
             exclude_id=active_game.current_player_id,
@@ -129,13 +151,15 @@ class TimerService:
         )
 
         logger.info(
-            "Choosing timeout in game %s: %s -> %s",
+            "Choosing timeout in game %s: %s -> %s (failures: %d/%d)",
             active_game.id,
             old_player_name,
             new_player_name,
+            game_state.failed_selections_count,
+            self._max_failed_selections,
         )
 
-        responses: list[game.schemas.ServiceResponse] = [
+        return [
             _result(
                 chat_id,
                 game.constants.ViewName.CHOOSING_TIMEOUT,
@@ -150,7 +174,6 @@ class TimerService:
                 selection_timeout=(self._question_selection_timeout),
             ),
         ]
-        return responses
 
     async def _handle_buzzer_timeout(
         self,

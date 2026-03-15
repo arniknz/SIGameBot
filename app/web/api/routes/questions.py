@@ -45,6 +45,7 @@ async def list_questions(
             text=q.text,
             answer=q.answer,
             cost=q.cost,
+            is_visible=q.is_visible,
             topic_title=title,
         )
         for q, title in rows
@@ -83,6 +84,7 @@ async def create_question(
         text=question.text,
         answer=question.answer,
         cost=question.cost,
+        is_visible=question.is_visible,
         topic_title=topic.title,
     )
 
@@ -128,6 +130,7 @@ async def update_question(
         text=question.text,
         answer=question.answer,
         cost=question.cost,
+        is_visible=question.is_visible,
         topic_title=topic.title if topic else None,
     )
 

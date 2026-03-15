@@ -15,8 +15,9 @@ class QuestionRepository:
     async def create_topic(
         self,
         title: str,
+        created_by: int | None = None,
     ) -> game.models.TopicModel:
-        topic = game.models.TopicModel(title=title)
+        topic = game.models.TopicModel(title=title, created_by=created_by)
         self._session.add(topic)
         await self._session.flush()
         return topic
@@ -31,8 +32,10 @@ class QuestionRepository:
         return (await self._session.execute(statement)).scalar_one_or_none()
 
     async def all_topics(self) -> list[game.models.TopicModel]:
-        statement = sqlalchemy.select(game.models.TopicModel).order_by(
-            game.models.TopicModel.title,
+        statement = (
+            sqlalchemy.select(game.models.TopicModel)
+            .where(game.models.TopicModel.is_visible.is_(True))
+            .order_by(game.models.TopicModel.title)
         )
         return list((await self._session.execute(statement)).scalars().all())
 
@@ -109,12 +112,14 @@ class QuestionRepository:
         text: str,
         answer: str,
         cost: int,
+        created_by: int | None = None,
     ) -> game.models.QuestionModel:
         question = game.models.QuestionModel(
             topic_id=topic_id,
             text=text,
             answer=answer,
             cost=cost,
+            created_by=created_by,
         )
         self._session.add(question)
         await self._session.flush()
@@ -126,13 +131,26 @@ class QuestionRepository:
     ) -> list[game.models.QuestionModel]:
         statement = (
             sqlalchemy.select(game.models.QuestionModel)
-            .where(game.models.QuestionModel.topic_id == topic_id)
+            .where(
+                game.models.QuestionModel.topic_id == topic_id,
+                game.models.QuestionModel.is_visible.is_(True),
+            )
             .order_by(game.models.QuestionModel.cost)
         )
         return list((await self._session.execute(statement)).scalars().all())
 
     async def all_question_ids(self) -> list[uuid.UUID]:
-        statement = sqlalchemy.select(game.models.QuestionModel.id)
+        statement = (
+            sqlalchemy.select(game.models.QuestionModel.id)
+            .join(
+                game.models.TopicModel,
+                game.models.QuestionModel.topic_id == game.models.TopicModel.id,
+            )
+            .where(
+                game.models.QuestionModel.is_visible.is_(True),
+                game.models.TopicModel.is_visible.is_(True),
+            )
+        )
         rows = await self._session.execute(statement)
         return [row[0] for row in rows.all()]
 
@@ -185,7 +203,10 @@ class QuestionRepository:
             await self._session.execute(
                 sqlalchemy.select(sqlalchemy.func.count())
                 .select_from(game.models.QuestionModel)
-                .where(game.models.QuestionModel.topic_id == topic_id),
+                .where(
+                    game.models.QuestionModel.topic_id == topic_id,
+                    game.models.QuestionModel.is_visible.is_(True),
+                ),
             )
         ).scalar_one()
 
@@ -336,9 +357,116 @@ class QuestionRepository:
             )
             .outerjoin(
                 game.models.QuestionModel,
-                game.models.QuestionModel.topic_id == game.models.TopicModel.id,
+                sqlalchemy.and_(
+                    game.models.QuestionModel.topic_id
+                    == game.models.TopicModel.id,
+                    game.models.QuestionModel.is_visible.is_(True),
+                ),
             )
+            .where(game.models.TopicModel.is_visible.is_(True))
             .group_by(game.models.TopicModel.id)
             .order_by(game.models.TopicModel.title)
+        )
+        return list((await self._session.execute(statement)).all())
+
+    async def get_topic_by_id(
+        self,
+        topic_id: uuid.UUID,
+    ) -> game.models.TopicModel | None:
+        return await self._session.get(game.models.TopicModel, topic_id)
+
+    async def get_question_by_id(
+        self,
+        question_id: uuid.UUID,
+    ) -> game.models.QuestionModel | None:
+        return await self._session.get(game.models.QuestionModel, question_id)
+
+    async def soft_delete_topic(
+        self,
+        topic_id: uuid.UUID,
+    ) -> bool:
+        topic = await self.get_topic_by_id(topic_id)
+        if topic is None:
+            return False
+        topic.is_visible = False
+        await self._session.execute(
+            sqlalchemy.update(game.models.QuestionModel)
+            .where(game.models.QuestionModel.topic_id == topic_id)
+            .values(is_visible=False)
+        )
+        return True
+
+    async def soft_delete_question(
+        self,
+        question_id: uuid.UUID,
+    ) -> bool:
+        question = await self.get_question_by_id(question_id)
+        if question is None:
+            return False
+        question.is_visible = False
+        return True
+
+    async def restore_topic(
+        self,
+        topic_id: uuid.UUID,
+    ) -> bool:
+        topic = await self.get_topic_by_id(topic_id)
+        if topic is None:
+            return False
+        topic.is_visible = True
+        await self._session.execute(
+            sqlalchemy.update(game.models.QuestionModel)
+            .where(game.models.QuestionModel.topic_id == topic_id)
+            .values(is_visible=True)
+        )
+        return True
+
+    async def restore_question(
+        self,
+        question_id: uuid.UUID,
+    ) -> bool:
+        question = await self.get_question_by_id(question_id)
+        if question is None:
+            return False
+        question.is_visible = True
+        return True
+
+    async def hidden_topics_for_user(
+        self,
+        user_id: int,
+    ) -> list[game.models.TopicModel]:
+        statement = (
+            sqlalchemy.select(game.models.TopicModel)
+            .where(
+                game.models.TopicModel.is_visible.is_(False),
+                game.models.TopicModel.created_by == user_id,
+            )
+            .order_by(game.models.TopicModel.title)
+        )
+        return list((await self._session.execute(statement)).scalars().all())
+
+    async def hidden_questions_for_user(
+        self,
+        user_id: int,
+    ) -> list[
+        sqlalchemy.Row[tuple[game.models.QuestionModel, str]]
+    ]:
+        statement = (
+            sqlalchemy.select(
+                game.models.QuestionModel,
+                game.models.TopicModel.title,
+            )
+            .join(
+                game.models.TopicModel,
+                game.models.QuestionModel.topic_id == game.models.TopicModel.id,
+            )
+            .where(
+                game.models.QuestionModel.is_visible.is_(False),
+                game.models.QuestionModel.created_by == user_id,
+            )
+            .order_by(
+                game.models.TopicModel.title,
+                game.models.QuestionModel.cost,
+            )
         )
         return list((await self._session.execute(statement)).all())
