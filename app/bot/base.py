@@ -10,7 +10,7 @@ import bot.handlers
 import bot.poller
 import bot.views
 import bot.worker
-import clients.schemas
+import clients.rabbitmq
 import clients.tg
 import config
 import db.database
@@ -19,8 +19,7 @@ import game.services
 
 logger = logging.getLogger(__name__)
 
-QUEUE_DRAIN_TIMEOUT = 15
-WORKER_STOP_TIMEOUT = 10
+TIMER_HEARTBEAT_SECONDS = 5
 
 
 class Bot:
@@ -28,7 +27,7 @@ class Bot:
         self._config = cfg
         self._tg = clients.tg.TgClient(cfg.bot_token)
         self._db = db.database.Database(cfg)
-        self._queue: asyncio.Queue[clients.schemas.Update] = asyncio.Queue()
+        self._rabbitmq = clients.rabbitmq.RabbitMQClient(cfg.rabbitmq_url)
 
         session_factory = self._db.session_factory
 
@@ -69,38 +68,65 @@ class Bot:
             content_service=self._content,
             gameplay_service=self._gameplay,
         )
-        self._poller = bot.poller.Poller(self._tg, self._queue)
+        self._poller = bot.poller.Poller(self._tg, self._rabbitmq)
+
+        timer_delays_ms = [
+            (cfg.buzzer_timeout + 1) * 1000,
+            (cfg.answer_timeout + 1) * 1000,
+            (cfg.question_selection_timeout + 1) * 1000,
+        ]
         self._workers = [
             bot.worker.Worker(
                 dispatcher=self._dispatcher,
-                queue=self._queue,
+                rabbitmq=self._rabbitmq,
                 worker_id=i,
+                timer_delays_ms=timer_delays_ms,
             )
             for i in range(cfg.workers_count)
         ]
         self._timer_task: asyncio.Task | None = None
+        self._heartbeat_task: asyncio.Task | None = None
 
     async def start(self) -> None:
         logger.info("Bot starting with %d workers", len(self._workers))
         await self._db.connect()
+        await self._rabbitmq.connect()
         await self._tg.start()
         await self._poller.start()
         for worker in self._workers:
             await worker.start()
-        self._timer_task = asyncio.create_task(self._timer_loop())
+        self._timer_task = asyncio.create_task(self._timer_consumer())
+        self._heartbeat_task = asyncio.create_task(self._timer_heartbeat())
+        await self._rabbitmq.publish_timer_check(delay_ms=0)
         logger.info("Bot is ready")
 
-    async def _timer_loop(self) -> None:
+    async def _timer_consumer(self) -> None:
+        queue = await self._rabbitmq.create_consumer(
+            clients.rabbitmq.TIMER_EVENTS_QUEUE,
+            prefetch_count=1,
+        )
+        async with queue.iterator() as queue_iter:
+            async for message in queue_iter:
+                try:
+                    await message.ack()
+                    service_responses = await self._timer.check_timers()
+                    responses = bot.views.render_many(service_responses)
+                    await self._send_responses(responses)
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    logger.exception("Timer consumer error")
+
+    async def _timer_heartbeat(self) -> None:
         while True:
             try:
-                service_responses = await self._timer.check_timers()
-                responses = bot.views.render_many(service_responses)
-                await self._send_responses(responses)
+                await asyncio.sleep(TIMER_HEARTBEAT_SECONDS)
+                await self._rabbitmq.publish_timer_check(delay_ms=0)
             except asyncio.CancelledError:
                 raise
             except Exception:
-                logger.exception("Timer loop error")
-            await asyncio.sleep(0.5)
+                logger.exception("Timer heartbeat error")
+                await asyncio.sleep(TIMER_HEARTBEAT_SECONDS)
 
     async def _send_responses(
         self,
@@ -156,28 +182,21 @@ class Bot:
         logger.info("Stopping poller (no new updates)")
         await self._poller.stop()
 
+        if self._heartbeat_task:
+            logger.info("Cancelling timer heartbeat")
+            self._heartbeat_task.cancel()
+            try:
+                await self._heartbeat_task
+            except asyncio.CancelledError:
+                pass
+
         if self._timer_task:
-            logger.info("Cancelling timer task")
+            logger.info("Cancelling timer consumer")
             self._timer_task.cancel()
             try:
                 await self._timer_task
             except asyncio.CancelledError:
                 pass
-
-        pending = self._queue.qsize()
-        if pending > 0:
-            logger.info("Draining queue (%d pending updates)...", pending)
-        try:
-            await asyncio.wait_for(
-                self._queue.join(), timeout=QUEUE_DRAIN_TIMEOUT
-            )
-            logger.info("Queue drained successfully")
-        except TimeoutError:
-            logger.warning(
-                "Queue drain timed out after %ds; "
-                "proceeding with worker shutdown",
-                QUEUE_DRAIN_TIMEOUT,
-            )
 
         logger.info("Stopping %d workers...", len(self._workers))
         await asyncio.gather(*(worker.stop() for worker in self._workers))
@@ -185,6 +204,12 @@ class Bot:
 
         logger.info("Closing Telegram client")
         await self._tg.close()
+
+        logger.info("Closing RabbitMQ connections")
+        try:
+            await self._rabbitmq.close()
+        except Exception:
+            logger.warning("Error closing RabbitMQ", exc_info=True)
 
         logger.info("Closing database connections")
         try:
