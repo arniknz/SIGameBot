@@ -22,6 +22,11 @@ class Config:
     answer_timeout: int = 15
     max_failed_selections: int = 3
 
+    rabbitmq_host: str = "localhost"
+    rabbitmq_port: int = 5672
+    rabbitmq_user: str = "guest"
+    rabbitmq_password: str = "guest"
+
     log_level: str = "INFO"
     log_file: str = "logs/bot.log"
 
@@ -34,6 +39,13 @@ class Config:
         return (
             f"postgresql+asyncpg://{self.db_user}:{self.db_password}"
             f"@{self.db_host}:{self.db_port}/{self.db_name}"
+        )
+
+    @property
+    def rabbitmq_url(self) -> str:
+        return (
+            f"amqp://{self.rabbitmq_user}:{self.rabbitmq_password}"
+            f"@{self.rabbitmq_host}:{self.rabbitmq_port}/"
         )
 
     @classmethod
@@ -60,6 +72,10 @@ class Config:
             max_failed_selections=int(
                 os.getenv("MAX_FAILED_SELECTIONS", "3")
             ),
+            rabbitmq_host=os.getenv("RABBITMQ_HOST", "localhost"),
+            rabbitmq_port=int(os.getenv("RABBITMQ_PORT", "5672")),
+            rabbitmq_user=os.getenv("RABBITMQ_USER", "guest"),
+            rabbitmq_password=os.getenv("RABBITMQ_PASSWORD", "guest"),
             log_level=os.getenv("LOG_LEVEL", "INFO"),
             log_file=os.getenv("LOG_FILE", "logs/bot.log"),
             admin_username=os.getenv("ADMIN_USERNAME", "admin"),

@@ -15,6 +15,21 @@ services:
       timeout: 5s
       retries: 5
 
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    volumes:
+      - rabbitmqdata:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   bot:
     build:
       context: .
@@ -24,11 +39,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     env_file:
       - .env
     environment:
       DB_HOST: 127.0.0.1
       DB_PORT: 5432
+      RABBITMQ_HOST: 127.0.0.1
+      RABBITMQ_PORT: 5672
     volumes:
       - ./logs:/opt/logs
 
@@ -57,3 +76,4 @@ services:
 
 volumes:
   pgdata:
+  rabbitmqdata:

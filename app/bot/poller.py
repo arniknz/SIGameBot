@@ -4,7 +4,7 @@ import asyncio
 import logging
 
 import aiohttp
-import clients.schemas
+import clients.rabbitmq
 import clients.tg
 
 logger = logging.getLogger(__name__)
@@ -14,10 +14,10 @@ class Poller:
     def __init__(
         self,
         tg_client: clients.tg.TgClient,
-        queue: asyncio.Queue[clients.schemas.Update],
+        rabbitmq: clients.rabbitmq.RabbitMQClient,
     ):
         self._tg = tg_client
-        self._queue = queue
+        self._rabbitmq = rabbitmq
         self._offset: int | None = None
         self._running = False
         self._task: asyncio.Task | None = None
@@ -31,8 +31,12 @@ class Poller:
                 )
                 for update in updates:
                     self._offset = update.update_id + 1
-                    await self._queue.put(update)
-                    logger.debug("Queued update %d", update.update_id)
+                    await self._rabbitmq.publish_update(
+                        update.model_dump()
+                    )
+                    logger.debug(
+                        "Published update %d to RabbitMQ", update.update_id
+                    )
             except asyncio.CancelledError:
                 raise
             except (aiohttp.ClientError, OSError) as exc:
