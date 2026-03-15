@@ -57,6 +57,7 @@ async def get_config(
         question_selection_timeout=cfg.question_selection_timeout,
         buzzer_timeout=cfg.buzzer_timeout,
         answer_timeout=cfg.answer_timeout,
+        max_failed_selections=cfg.max_failed_selections,
     )
 
 

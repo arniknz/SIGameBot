@@ -39,6 +39,7 @@ async def list_topics(
         schemas.TopicWithCountOut(
             id=topic.id,
             title=topic.title,
+            is_visible=topic.is_visible,
             question_count=count,
         )
         for topic, count in rows

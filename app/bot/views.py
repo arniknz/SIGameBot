@@ -232,6 +232,17 @@ def _render_choosing_timeout(cid: int, p: _P) -> game.schemas.GameResponse:
     )
 
 
+def _render_game_ended_afk(cid: int, p: _P) -> game.schemas.GameResponse:
+    count = p["failed_count"]
+    return _make(
+        cid,
+        (
+            f"💤 {count} consecutive turns with no question selected.\n"
+            f"🏚 All players appear to be AFK — ending the game."
+        ),
+    )
+
+
 def _render_topic_select_for_add(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
@@ -272,6 +283,26 @@ def _render_question_select_for_delete(
     )
 
 
+def _render_topic_select_for_restore(
+    cid: int, p: _P
+) -> game.schemas.GameResponse:
+    return _make(
+        cid,
+        "♻️ Select a topic to restore:",
+        keyboard=bot.keyboards.topic_select_for_restore(p["topics"]),
+    )
+
+
+def _render_question_select_for_restore(
+    cid: int, p: _P
+) -> game.schemas.GameResponse:
+    return _make(
+        cid,
+        "♻️ Select a question to restore:",
+        keyboard=bot.keyboards.question_select_for_restore(p["questions"]),
+    )
+
+
 def _render_help(cid: int, _p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
@@ -289,8 +320,10 @@ def _render_help(cid: int, _p: _P) -> game.schemas.GameResponse:
             "  /my_games — Your hosted games\n"
             "  /add_topic <name> — Create a topic\n"
             "  /add_question — Add a question\n"
-            "  /delete_topic — Delete a topic\n"
-            "  /delete_question — Delete a question\n"
+            "  /delete_topic — Hide a topic\n"
+            "  /delete_question — Hide a question\n"
+            "  /restore_topic — Restore a hidden topic\n"
+            "  /restore_question — Restore a hidden question\n"
             "  /shop — Browse the item shop\n"
             "  /balance — Check your balance\n\n"
             "ℹ️ Available Everywhere:\n"
@@ -598,6 +631,7 @@ _RENDERERS: dict[game.constants.ViewName, Renderer] = {
     game.constants.ViewName.BUZZER_TIMEOUT: _render_buzzer_timeout,
     game.constants.ViewName.ANSWER_TIMEOUT: _render_answer_timeout,
     game.constants.ViewName.CHOOSING_TIMEOUT: _render_choosing_timeout,
+    game.constants.ViewName.GAME_ENDED_AFK: _render_game_ended_afk,
     game.constants.ViewName.TOPIC_SELECT_FOR_ADD: (
         _render_topic_select_for_add
     ),
@@ -609,6 +643,12 @@ _RENDERERS: dict[game.constants.ViewName, Renderer] = {
     ),
     game.constants.ViewName.QUESTION_SELECT_FOR_DELETE: (
         _render_question_select_for_delete
+    ),
+    game.constants.ViewName.TOPIC_SELECT_FOR_RESTORE: (
+        _render_topic_select_for_restore
+    ),
+    game.constants.ViewName.QUESTION_SELECT_FOR_RESTORE: (
+        _render_question_select_for_restore
     ),
     game.constants.ViewName.HELP: _render_help,
     game.constants.ViewName.RULES: _render_rules,

@@ -20,6 +20,7 @@ class Config:
     question_selection_timeout: int = 30
     buzzer_timeout: int = 10
     answer_timeout: int = 15
+    max_failed_selections: int = 3
 
     log_level: str = "INFO"
     log_file: str = "logs/bot.log"
@@ -56,6 +57,9 @@ class Config:
             ),
             buzzer_timeout=int(os.getenv("BUZZER_TIMEOUT", "10")),
             answer_timeout=int(os.getenv("ANSWER_TIMEOUT", "15")),
+            max_failed_selections=int(
+                os.getenv("MAX_FAILED_SELECTIONS", "3")
+            ),
             log_level=os.getenv("LOG_LEVEL", "INFO"),
             log_file=os.getenv("LOG_FILE", "logs/bot.log"),
             admin_username=os.getenv("ADMIN_USERNAME", "admin"),

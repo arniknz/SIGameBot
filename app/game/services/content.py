@@ -43,6 +43,9 @@ class ContentService:
         async with self._session_factory() as session, session.begin():
             question_repo = db.repositories.question.QuestionRepository(session)
 
+            user_repo = db.repositories.user.UserRepository(session)
+            user = await user_repo.get_by_telegram_id(telegram_id)
+
             existing = await question_repo.get_topic_by_title(topic_name)
             if existing is not None:
                 return [
@@ -53,7 +56,10 @@ class ContentService:
                     )
                 ]
 
-            new_topic = await question_repo.create_topic(topic_name)
+            new_topic = await question_repo.create_topic(
+                topic_name,
+                created_by=user.id if user else None,
+            )
             logger.info(
                 "Topic '%s' created (id=%s)",
                 topic_name,
@@ -79,6 +85,8 @@ class ContentService:
     ) -> list[game.schemas.ServiceResponse]:
         async with self._session_factory() as session, session.begin():
             question_repo = db.repositories.question.QuestionRepository(session)
+            user_repo = db.repositories.user.UserRepository(session)
+            user = await user_repo.get_by_telegram_id(telegram_id)
 
             try:
                 topic_id = uuid.UUID(topic_id_str)
@@ -96,6 +104,7 @@ class ContentService:
                 text,
                 answer,
                 cost,
+                created_by=user.id if user else None,
             )
             question_count = await question_repo.question_count_by_topic(
                 topic_id
@@ -183,6 +192,7 @@ class ContentService:
     ) -> list[game.schemas.ServiceResponse]:
         async with self._session_factory() as session, session.begin():
             question_repo = db.repositories.question.QuestionRepository(session)
+            user_repo = db.repositories.user.UserRepository(session)
 
             try:
                 topic_id = uuid.UUID(topic_id_str)
@@ -195,19 +205,51 @@ class ContentService:
                     )
                 ]
 
-            deleted_count = await question_repo.delete_topic(topic_id)
+            topic = await question_repo.get_topic_by_id(topic_id)
+            if topic is None:
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="⚠️ Topic not found.",
+                    )
+                ]
+
+            user = await user_repo.get_by_telegram_id(telegram_id)
+            if user is None:
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="⚠️ User not found.",
+                    )
+                ]
+
+            if topic.created_by is not None and topic.created_by != user.id:
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="🚫 You can only delete topics you created.",
+                    )
+                ]
+
+            await question_repo.soft_delete_topic(topic_id)
 
             logger.info(
-                "Topic %s deleted with %d questions",
+                "Topic %s soft-deleted by user %s",
                 topic_id,
-                deleted_count,
+                telegram_id,
             )
 
             return [
                 _result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
-                    text=(f"🗑 Topic deleted with {deleted_count} question(s)."),
+                    text=(
+                        f"🗑 Topic «{topic.title}» hidden. "
+                        f"Use /restore_topic to restore it."
+                    ),
                 )
             ]
 
@@ -284,6 +326,7 @@ class ContentService:
     ) -> list[game.schemas.ServiceResponse]:
         async with self._session_factory() as session, session.begin():
             question_repo = db.repositories.question.QuestionRepository(session)
+            user_repo = db.repositories.user.UserRepository(session)
 
             try:
                 question_id = uuid.UUID(question_id_str)
@@ -296,23 +339,54 @@ class ContentService:
                     )
                 ]
 
-            deleted = await question_repo.delete_question(question_id)
-            if not deleted:
+            question = await question_repo.get_question_by_id(question_id)
+            if question is None:
                 return [
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="⚠️ Question not found or already deleted.",
+                        text="⚠️ Question not found.",
                     )
                 ]
 
-            logger.info("Question %s deleted", question_id)
+            user = await user_repo.get_by_telegram_id(telegram_id)
+            if user is None:
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="⚠️ User not found.",
+                    )
+                ]
+
+            if (
+                question.created_by is not None
+                and question.created_by != user.id
+            ):
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="🚫 You can only delete questions you created.",
+                    )
+                ]
+
+            await question_repo.soft_delete_question(question_id)
+
+            logger.info(
+                "Question %s soft-deleted by user %s",
+                question_id,
+                telegram_id,
+            )
 
             return [
                 _result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
-                    text="🗑 Question deleted!",
+                    text=(
+                        "🗑 Question hidden. "
+                        "Use /restore_question to restore it."
+                    ),
                 )
             ]
 
@@ -390,3 +464,212 @@ class ContentService:
                 answer_timeout=self._answer_timeout,
             )
         ]
+
+    async def handle_restore_topic(
+        self,
+        chat_id: int,
+        telegram_id: int,
+    ) -> list[game.schemas.ServiceResponse]:
+        async with self._session_factory() as session, session.begin():
+            question_repo = db.repositories.question.QuestionRepository(session)
+            user_repo = db.repositories.user.UserRepository(session)
+
+            user = await user_repo.get_by_telegram_id(telegram_id)
+            if user is None:
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="⚠️ User not found.",
+                    )
+                ]
+
+            hidden = await question_repo.hidden_topics_for_user(user.id)
+            if not hidden:
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="📭 No hidden topics to restore.",
+                    )
+                ]
+
+            return [
+                _result(
+                    chat_id,
+                    game.constants.ViewName.TOPIC_SELECT_FOR_RESTORE,
+                    topics=hidden,
+                )
+            ]
+
+    async def confirm_restore_topic(
+        self,
+        chat_id: int,
+        telegram_id: int,
+        topic_id_str: str,
+    ) -> list[game.schemas.ServiceResponse]:
+        async with self._session_factory() as session, session.begin():
+            question_repo = db.repositories.question.QuestionRepository(session)
+            user_repo = db.repositories.user.UserRepository(session)
+
+            try:
+                topic_id = uuid.UUID(topic_id_str)
+            except ValueError:
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="⚠️ Invalid topic ID.",
+                    )
+                ]
+
+            topic = await question_repo.get_topic_by_id(topic_id)
+            if topic is None:
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="⚠️ Topic not found.",
+                    )
+                ]
+
+            user = await user_repo.get_by_telegram_id(telegram_id)
+            if user is None:
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="⚠️ User not found.",
+                    )
+                ]
+
+            if topic.created_by is not None and topic.created_by != user.id:
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="🚫 You can only restore topics you created.",
+                    )
+                ]
+
+            await question_repo.restore_topic(topic_id)
+
+            logger.info(
+                "Topic %s restored by user %s",
+                topic_id,
+                telegram_id,
+            )
+
+            return [
+                _result(
+                    chat_id,
+                    game.constants.ViewName.PLAIN,
+                    text=f"✅ Topic «{topic.title}» restored!",
+                )
+            ]
+
+    async def handle_restore_question(
+        self,
+        chat_id: int,
+        telegram_id: int,
+    ) -> list[game.schemas.ServiceResponse]:
+        async with self._session_factory() as session, session.begin():
+            question_repo = db.repositories.question.QuestionRepository(session)
+            user_repo = db.repositories.user.UserRepository(session)
+
+            user = await user_repo.get_by_telegram_id(telegram_id)
+            if user is None:
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="⚠️ User not found.",
+                    )
+                ]
+
+            hidden = await question_repo.hidden_questions_for_user(user.id)
+            if not hidden:
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="📭 No hidden questions to restore.",
+                    )
+                ]
+
+            return [
+                _result(
+                    chat_id,
+                    game.constants.ViewName.QUESTION_SELECT_FOR_RESTORE,
+                    questions=hidden,
+                )
+            ]
+
+    async def confirm_restore_question(
+        self,
+        chat_id: int,
+        telegram_id: int,
+        question_id_str: str,
+    ) -> list[game.schemas.ServiceResponse]:
+        async with self._session_factory() as session, session.begin():
+            question_repo = db.repositories.question.QuestionRepository(session)
+            user_repo = db.repositories.user.UserRepository(session)
+
+            try:
+                question_id = uuid.UUID(question_id_str)
+            except ValueError:
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="⚠️ Invalid question ID.",
+                    )
+                ]
+
+            question = await question_repo.get_question_by_id(question_id)
+            if question is None:
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="⚠️ Question not found.",
+                    )
+                ]
+
+            user = await user_repo.get_by_telegram_id(telegram_id)
+            if user is None:
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="⚠️ User not found.",
+                    )
+                ]
+
+            if (
+                question.created_by is not None
+                and question.created_by != user.id
+            ):
+                return [
+                    _result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="🚫 You can only restore questions you created.",
+                    )
+                ]
+
+            await question_repo.restore_question(question_id)
+
+            logger.info(
+                "Question %s restored by user %s",
+                question_id,
+                telegram_id,
+            )
+
+            return [
+                _result(
+                    chat_id,
+                    game.constants.ViewName.PLAIN,
+                    text="✅ Question restored!",
+                )
+            ]

@@ -27,6 +27,17 @@ class TopicModel(Base):
         unique=True,
         nullable=False,
     )
+    is_visible: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean,
+        default=True,
+        server_default="true",
+    )
+    created_by: sqlalchemy.orm.Mapped[int | None] = (
+        sqlalchemy.orm.mapped_column(
+            sqlalchemy.BigInteger,
+            sqlalchemy.ForeignKey("users.id", ondelete="SET NULL"),
+        )
+    )
 
     questions: sqlalchemy.orm.Mapped[list[QuestionModel]] = (
         sqlalchemy.orm.relationship(
@@ -62,6 +73,17 @@ class QuestionModel(Base):
     cost: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
         sqlalchemy.Integer,
         nullable=False,
+    )
+    is_visible: sqlalchemy.orm.Mapped[bool] = sqlalchemy.orm.mapped_column(
+        sqlalchemy.Boolean,
+        default=True,
+        server_default="true",
+    )
+    created_by: sqlalchemy.orm.Mapped[int | None] = (
+        sqlalchemy.orm.mapped_column(
+            sqlalchemy.BigInteger,
+            sqlalchemy.ForeignKey("users.id", ondelete="SET NULL"),
+        )
     )
 
     topic: sqlalchemy.orm.Mapped[TopicModel] = sqlalchemy.orm.relationship(

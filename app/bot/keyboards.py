@@ -285,6 +285,65 @@ def question_select_for_delete(
     return kb
 
 
+def topic_select_for_restore(
+    topics: list[game.models.TopicModel],
+) -> list[list[dict[str, str]]]:
+    kb: list[list[dict[str, str]]] = [
+        [
+            {
+                "text": f"♻️ {t.title}",
+                "callback_data": (
+                    f"{game.constants.CallbackPrefix.RESTORE_TOPIC}:{t.id}"
+                ),
+            }
+        ]
+        for t in topics
+    ]
+    kb.append(
+        [
+            {
+                "text": "❌ Cancel",
+                "callback_data": (
+                    f"{game.constants.CallbackPrefix.RESTORE_TOPIC}"
+                    f":{game.constants.Callback.CANCEL}"
+                ),
+            }
+        ]
+    )
+    return kb
+
+
+def question_select_for_restore(
+    questions: list[sqlalchemy.Row[tuple[game.models.QuestionModel, str]]],
+) -> list[list[dict[str, str]]]:
+    kb: list[list[dict[str, str]]] = []
+    for q, topic_title in questions:
+        label = q.text[:30] + "..." if len(q.text) > 30 else q.text
+        kb.append(
+            [
+                {
+                    "text": f"♻️ [{topic_title}] {label} ({q.cost}pts)",
+                    "callback_data": (
+                        f"{game.constants.CallbackPrefix.RESTORE_QUESTION}"
+                        f":{q.id}"
+                    ),
+                }
+            ]
+        )
+    kb.append(
+        [
+            {
+                "text": "❌ Cancel",
+                "callback_data": (
+                    f"{game.constants.CallbackPrefix.RESTORE_QUESTION}"
+                    f":{game.constants.Callback.CANCEL}"
+                ),
+            }
+        ]
+    )
+    return kb
+
+
 def shop_main() -> list[list[dict[str, str]]]:
     kb: list[list[dict[str, str]]] = []
     for cat in game.constants.ShopCategory:
