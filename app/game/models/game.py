@@ -173,6 +173,13 @@ class GameStateModel(Base):
         sqlalchemy.Boolean,
         default=False,
     )
+    failed_selections_count: sqlalchemy.orm.Mapped[int] = (
+        sqlalchemy.orm.mapped_column(
+            sqlalchemy.Integer,
+            default=0,
+            server_default="0",
+        )
+    )
     updated_at: sqlalchemy.orm.Mapped[datetime.datetime] = (
         sqlalchemy.orm.mapped_column(
             sqlalchemy.DateTime(timezone=True),

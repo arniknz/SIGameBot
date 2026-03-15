@@ -317,6 +317,7 @@ class GameplayService:
             game_state.buzzer_pressed_by = None
             game_state.buzzer_pressed_at = None
             game_state.cost_override = cat_cost
+            game_state.failed_selections_count = 0
             game_state.timer_ends_at = now + datetime.timedelta(
                 seconds=self._buzzer_timeout,
             )
@@ -416,6 +417,7 @@ class GameplayService:
             game_state.buzzer_pressed_by = None
             game_state.buzzer_pressed_at = None
             game_state.cost_override = None
+            game_state.failed_selections_count = 0
             game_state.timer_ends_at = now + datetime.timedelta(
                 seconds=self._buzzer_timeout,
             )

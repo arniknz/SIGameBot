@@ -11,6 +11,7 @@ class TopicOut(pydantic.BaseModel):
 
     id: uuid.UUID
     title: str
+    is_visible: bool = True
 
 
 class TopicWithCountOut(TopicOut):
@@ -33,6 +34,7 @@ class QuestionOut(pydantic.BaseModel):
     text: str
     answer: str
     cost: int
+    is_visible: bool = True
     topic_title: str | None = None
 
 
@@ -98,9 +100,11 @@ class ConfigOut(pydantic.BaseModel):
     question_selection_timeout: int
     buzzer_timeout: int
     answer_timeout: int
+    max_failed_selections: int
 
 
 class ConfigUpdate(pydantic.BaseModel):
     question_selection_timeout: int | None = pydantic.Field(default=None, gt=0)
     buzzer_timeout: int | None = pydantic.Field(default=None, gt=0)
     answer_timeout: int | None = pydantic.Field(default=None, gt=0)
+    max_failed_selections: int | None = pydantic.Field(default=None, gt=0)

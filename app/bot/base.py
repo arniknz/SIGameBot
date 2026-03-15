@@ -50,6 +50,7 @@ class Bot:
         self._timer = game.services.TimerService(
             session_factory,
             question_selection_timeout=cfg.question_selection_timeout,
+            max_failed_selections=cfg.max_failed_selections,
         )
         self._shop = game.services.ShopService(session_factory)
         self._dialog = bot.dialog.DialogManager()

@@ -56,6 +56,16 @@ def _register_commands(
         result = await content.handle_delete_question(chat_id, telegram_id)
         return bot.views.render_many(result)
 
+    @router.command(game.constants.Command.RESTORE_TOPIC, private=True)
+    async def cmd_restore_topic(chat_id: int, telegram_id: int, **_):
+        result = await content.handle_restore_topic(chat_id, telegram_id)
+        return bot.views.render_many(result)
+
+    @router.command(game.constants.Command.RESTORE_QUESTION, private=True)
+    async def cmd_restore_question(chat_id: int, telegram_id: int, **_):
+        result = await content.handle_restore_question(chat_id, telegram_id)
+        return bot.views.render_many(result)
+
     @router.command(game.constants.Command.HELP, private=True)
     async def cmd_help(chat_id: int, **_):
         result = await content.handle_help(chat_id)
@@ -156,6 +166,54 @@ def _register_callbacks(
                 ]
             )
         result = await content.confirm_delete_question(
+            chat_id, telegram_id, value
+        )
+        return bot.views.render_many(result)
+
+    @router.callback_pattern(
+        rf"^{game.constants.CallbackPrefix.RESTORE_TOPIC}:(.+)$"
+    )
+    async def cb_restore_topic(
+        match: re.Match[str],
+        chat_id: int,
+        telegram_id: int,
+        **_,
+    ):
+        value = match.group(1)
+        if value == game.constants.Callback.CANCEL:
+            return bot.views.render_many(
+                [
+                    game.schemas.ServiceResponse(
+                        chat_id,
+                        game.constants.ViewName.DIALOG_CANCELLED,
+                    )
+                ]
+            )
+        result = await content.confirm_restore_topic(
+            chat_id, telegram_id, value
+        )
+        return bot.views.render_many(result)
+
+    @router.callback_pattern(
+        rf"^{game.constants.CallbackPrefix.RESTORE_QUESTION}:(.+)$"
+    )
+    async def cb_restore_question(
+        match: re.Match[str],
+        chat_id: int,
+        telegram_id: int,
+        **_,
+    ):
+        value = match.group(1)
+        if value == game.constants.Callback.CANCEL:
+            return bot.views.render_many(
+                [
+                    game.schemas.ServiceResponse(
+                        chat_id,
+                        game.constants.ViewName.DIALOG_CANCELLED,
+                    )
+                ]
+            )
+        result = await content.confirm_restore_question(
             chat_id, telegram_id, value
         )
         return bot.views.render_many(result)
