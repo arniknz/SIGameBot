@@ -1,3 +1,4 @@
+aio-pika==9.6.1
 aiohttp==3.9.3
 alembic==1.13.1
 asyncpg==0.29.0
