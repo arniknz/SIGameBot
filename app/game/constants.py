@@ -84,7 +84,7 @@ DAILY_REWARD_AMOUNT: int = 100
 
 
 class BotMessage(enum.StrEnum):
-    DB_ERROR = "⚠️ Oops! The bot is having a moment. Please try again shortly!"
+    DB_ERROR = "⚠️ Упс! У бота временный сбой. Попробуйте позже!"
 
 
 class Command(enum.StrEnum):

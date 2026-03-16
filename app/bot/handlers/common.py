@@ -12,13 +12,13 @@ def _dm_redirect(
     bot_username: str,
     deeplink: str,
 ) -> list[game.schemas.GameResponse]:
-    text = f"{label} \u2014 check your private chat with me."
+    text = f"{label} \u2014 смотрите в личке со мной."
     kb: list[list[dict[str, str]]] | None = None
     if bot_username:
         kb = [
             [
                 {
-                    "text": "\U0001f4e9 Open DM",
+                    "text": "\U0001f4e9 Открыть личку",
                     "url": f"https://t.me/{bot_username}?start={deeplink}",
                 }
             ]
@@ -34,14 +34,14 @@ def register(
     async def cmd_help_group(
         chat_id: int, bot_username: str = "", **_
     ):
-        return _dm_redirect(chat_id, "\u2753 Help", bot_username, "help")
+        return _dm_redirect(chat_id, "\u2753 Справка", bot_username, "help")
 
     @router.command(game.constants.Command.RULES)
     async def cmd_rules_group(
         chat_id: int, bot_username: str = "", **_
     ):
         return _dm_redirect(
-            chat_id, "\U0001f4d6 Rules", bot_username, "rules"
+            chat_id, "\U0001f4d6 Правила", bot_username, "rules"
         )
 
     @router.callback(game.constants.Callback.HELP)
@@ -49,7 +49,7 @@ def register(
         return [
             game.schemas.GameResponse(
                 chat_id=chat_id,
-                text="\u2753 Use /help in my DMs!",
+                text="\u2753 Используйте /help в личке со мной!",
                 is_alert=True,
             )
         ]
@@ -59,7 +59,7 @@ def register(
         return [
             game.schemas.GameResponse(
                 chat_id=chat_id,
-                text="\U0001f4d6 Use /rules in my DMs!",
+                text="\U0001f4d6 Используйте /rules в личке со мной!",
                 is_alert=True,
             )
         ]

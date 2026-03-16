@@ -39,10 +39,10 @@ def _render_game_created(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
-            f"🎲 Let the games begin!\n\n"
-            f"🎮 {p['username']} created a new game!\n"
-            f"Press Join to play or Spectate to watch.\n\n"
-            f"🕹 Waiting for players..."
+            f"🎲 Игра начинается!\n\n"
+            f"🎮 {p['username']} создал(а) новую игру!\n"
+            f"Нажмите «Войти», чтобы играть, или «Смотреть» — чтобы наблюдать.\n\n"
+            f"🕹 Ожидаем игроков..."
         ),
         keyboard=kb,
     )
@@ -63,22 +63,22 @@ def _render_lobby(cid: int, p: _P) -> game.schemas.GameResponse:
         if role == game.constants.ParticipantRole.SPECTATOR
     ]
 
-    lines = ["🎲 Jeopardy Game\n"]
-    lines.append(f"👥 Players ({len(players)}):")
+    lines = ["🎲 Игра «Своя игра»\n"]
+    lines.append(f"👥 Игроки ({len(players)}):")
     for name, is_host in players:
         tag = "👑" if is_host else "🎯"
-        suffix = " (host)" if is_host else ""
+        suffix = " (ведущий)" if is_host else ""
         lines.append(f"  {tag} {name}{suffix}")
 
     if spectators:
-        lines.append(f"\n👀 Spectators ({len(spectators)}):")
+        lines.append(f"\n👀 Зрители ({len(spectators)}):")
         for name in spectators:
             lines.append(f"  👀 {name}")
 
     if len(players) < 2:
-        lines.append("\n⏳ Need at least 2 players to start.")
+        lines.append("\n⏳ Нужно минимум 2 игрока для старта.")
     else:
-        lines.append("\n🕹 Ready to start! Host can press Start Game.")
+        lines.append("\n🕹 Можно начинать! Ведущий нажимает «Начать игру».")
 
     kb = bot.keyboards.lobby(bot_username)
     if bot_username:
@@ -91,8 +91,8 @@ def _render_player_joined(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
-            f"🎉 {p['username']} joined the game!\n\n"
-            f"👥 Players ({len(names)}): " + ", ".join(names)
+            f"🎉 {p['username']} присоединился(ась) к игре!\n\n"
+            f"👥 Игроки ({len(names)}): " + ", ".join(names)
         ),
     )
 
@@ -100,21 +100,21 @@ def _render_player_joined(cid: int, p: _P) -> game.schemas.GameResponse:
 def _render_player_rejoined(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
-        f"🔄 Welcome back, {p['username']}! Ready to play again?",
+        f"🔄 С возвращением, {p['username']}! Готовы играть снова?",
     )
 
 
 def _render_now_spectating(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
-        f"👀 {p['username']} is watching the game. Enjoy the show!",
+        f"👀 {p['username']} смотрит игру. Приятного просмотра!",
     )
 
 
 def _render_left_game(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
-        f"👋 {p['username']} has left the game. See you next time!",
+        f"👋 {p['username']} вышел(а) из игры. До встречи!",
     )
 
 
@@ -122,9 +122,9 @@ def _render_host_transferred(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
-            f"👋 {p['old_host']} (host) has left.\n"
-            f"👑 {p['new_host']} is the new host! "
-            f"Long live the host!"
+            f"👋 {p['old_host']} (ведущий) вышел(а).\n"
+            f"👑 Новый ведущий — {p['new_host']}! "
+            f"Да здравствует ведущий!"
         ),
     )
 
@@ -133,7 +133,7 @@ def _render_scoreboard(cid: int, p: _P) -> game.schemas.GameResponse:
     lines = [p["title"]]
     for rank, (name, points) in enumerate(p["scores"], 1):
         medal = _MEDAL.get(rank, f"{rank}.")
-        lines.append(f"{medal} {name}: {points} pts")
+        lines.append(f"{medal} {name}: {points} очк.")
     keyboard = bot.keyboards.score() if p.get("with_controls") else None
     return _make(cid, "\n".join(lines), keyboard=keyboard)
 
@@ -147,9 +147,9 @@ def _render_board(cid: int, p: _P) -> game.schemas.GameResponse:
     parts = []
     if intro:
         parts.append(intro)
-    turn_msg = f"🎤 {player}, it's your turn! Pick a question"
+    turn_msg = f"🎤 {player}, ваша очередь! Выберите вопрос"
     if timeout:
-        turn_msg += f" (⏱ {timeout}s):"
+        turn_msg += f" (⏱ {timeout} сек):"
     else:
         turn_msg += ":"
     parts.append(turn_msg + "\n")
@@ -165,10 +165,10 @@ def _render_question_asked(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
-            f"📢 Category: {p['topic']}\n"
-            f"💰 Worth: {p['cost']} points\n\n"
+            f"📢 Категория: {p['topic']}\n"
+            f"💰 Стоимость: {p['cost']} очков\n\n"
             f"❓ {p['text']}\n\n"
-            f"⏱ {p['buzzer_timeout']}s — hit the buzzer!"
+            f"⏱ {p['buzzer_timeout']} сек — нажмите кнопку «Звонок»!"
         ),
         keyboard=bot.keyboards.buzzer(),
     )
@@ -178,11 +178,11 @@ def _render_cat_revealed(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
-            f"🎲 Cat in a Bag!\n\n"
-            f"📢 Category: {p['topic']}\n"
-            f"💰 Worth: {p['cost']} points\n\n"
+            f"🎲 Кот в мешке!\n\n"
+            f"📢 Категория: {p['topic']}\n"
+            f"💰 Стоимость: {p['cost']} очков\n\n"
             f"❓ {p['text']}\n\n"
-            f"⏱ {p['buzzer_timeout']}s — hit the buzzer!"
+            f"⏱ {p['buzzer_timeout']} сек — нажмите кнопку «Звонок»!"
         ),
         keyboard=bot.keyboards.buzzer(),
     )
@@ -193,9 +193,9 @@ def _render_buzzer_pressed(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
-            f"⚡ {p['username']} hit the buzzer!\n\n"
-            f"⏱ You have {p['answer_timeout']}s to answer.\n"
-            f"Type your answer now!"
+            f"⚡ {p['username']} нажал(а) звонок!\n\n"
+            f"⏱ У вас {p['answer_timeout']} сек на ответ.\n"
+            f"Введите ответ!"
         ),
         keyboard=kb,
     )
@@ -205,10 +205,10 @@ def _render_all_in_activated(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
-            f"⚡ {p['username']} goes ALL-IN!\n\n"
-            f"🎯 Correct answer → DOUBLE points (+{p['cost'] * 2})!\n"
-            f"💀 Wrong answer → score drops to 0!\n\n"
-            f"⏱ Type your answer now!"
+            f"⚡ {p['username']} идёт ва-банк!\n\n"
+            f"🎯 Верный ответ → УДВОЕНИЕ очков (+{p['cost'] * 2})!\n"
+            f"💀 Неверный ответ → счёт обнуляется!\n\n"
+            f"⏱ Введите ответ!"
         ),
     )
 
@@ -217,10 +217,10 @@ def _render_answer_correct(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
-            f"🎯 CORRECT! Brilliant!\n\n"
-            f"🌟 {p['username']} earns "
-            f"+{p['cost']} points!\n"
-            f"✅ Answer: {p['correct_answer']}"
+            f"🎯 ВЕРНО! Отлично!\n\n"
+            f"🌟 {p['username']} получает "
+            f"+{p['cost']} очков!\n"
+            f"✅ Ответ: {p['correct_answer']}"
         ),
     )
 
@@ -229,10 +229,10 @@ def _render_answer_wrong(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
-            f"💔 Ouch! Wrong answer.\n\n"
-            f"📉 {p['username']} loses "
-            f"−{p['cost']} points.\n"
-            f"✅ Correct answer: {p['correct_answer']}"
+            f"💔 Увы! Неверный ответ.\n\n"
+            f"📉 {p['username']} теряет "
+            f"−{p['cost']} очков.\n"
+            f"✅ Правильный ответ: {p['correct_answer']}"
         ),
     )
 
@@ -241,8 +241,8 @@ def _render_buzzer_timeout(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
-            f"💤 Time's up! Nobody buzzed in.\n\n"
-            f"✅ The answer was: {p['correct_answer']}"
+            f"💤 Время вышло! Никто не нажал звонок.\n\n"
+            f"✅ Правильный ответ: {p['correct_answer']}"
         ),
     )
 
@@ -251,10 +251,10 @@ def _render_answer_timeout(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
-            f"⏰ Too slow! Time ran out.\n\n"
-            f"📉 {p['username']} loses "
-            f"−{p['cost']} points.\n"
-            f"✅ Correct answer: {p['correct_answer']}"
+            f"⏰ Слишком медленно! Время вышло.\n\n"
+            f"📉 {p['username']} теряет "
+            f"−{p['cost']} очков.\n"
+            f"✅ Правильный ответ: {p['correct_answer']}"
         ),
     )
 
@@ -263,9 +263,9 @@ def _render_choosing_timeout(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
-            f"⏰ {p['old_player']} took too long "
-            f"to choose a question!\n"
-            f"🔄 Skipping to the next player..."
+            f"⏰ {p['old_player']} слишком долго "
+            f"выбирал(а) вопрос!\n"
+            f"🔄 Переход к следующему игроку..."
         ),
     )
 
@@ -274,8 +274,8 @@ def _render_game_ended_no_players(cid: int, _p: _P) -> game.schemas.GameResponse
     return _make(
         cid,
         (
-            "\U0001f3c1 Game ended. No players remaining.\n\n"
-            "To create a new game, send /start"
+            "\U0001f3c1 Игра завершена. Игроков не осталось.\n\n"
+            "Чтобы создать новую игру, отправьте /start"
         ),
         keyboard=[],
     )
@@ -286,8 +286,8 @@ def _render_game_ended_afk(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
-            f"💤 {count} consecutive turns with no question selected.\n"
-            f"🏚 All players appear to be AFK — ending the game."
+            f"💤 {count} ходов подряд без выбора вопроса.\n"
+            f"🏚 Похоже, все игроки не у дел — завершаем игру."
         ),
     )
 
@@ -295,7 +295,7 @@ def _render_game_ended_afk(cid: int, p: _P) -> game.schemas.GameResponse:
 def _render_topic_select_for_add(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
-        "📂 Pick a topic for your new question:",
+        "📂 Выберите тему для нового вопроса:",
         keyboard=bot.keyboards.topic_select_for_add(p["topics"]),
     )
 
@@ -305,7 +305,7 @@ def _render_topic_select_for_delete(
 ) -> game.schemas.GameResponse:
     return _make(
         cid,
-        "🗑 Select a topic to delete (all questions will be removed):",
+        "🗑 Выберите тему для удаления (все вопросы будут скрыты):",
         keyboard=bot.keyboards.topic_select_for_delete(p["topics_with_counts"]),
     )
 
@@ -315,7 +315,7 @@ def _render_topic_select_for_delete_question(
 ) -> game.schemas.GameResponse:
     return _make(
         cid,
-        "📂 Choose a topic to browse questions for deletion:",
+        "📂 Выберите тему, чтобы просмотреть вопросы для удаления:",
         keyboard=bot.keyboards.topic_select_for_delete_question(
             p["topics_with_counts"]
         ),
@@ -327,7 +327,7 @@ def _render_question_select_for_delete(
 ) -> game.schemas.GameResponse:
     return _make(
         cid,
-        "🗑 Pick a question to delete:",
+        "🗑 Выберите вопрос для удаления:",
         keyboard=bot.keyboards.question_select_for_delete(p["questions"]),
     )
 
@@ -337,7 +337,7 @@ def _render_topic_select_for_restore(
 ) -> game.schemas.GameResponse:
     return _make(
         cid,
-        "♻️ Select a topic to restore:",
+        "♻️ Выберите тему для восстановления:",
         keyboard=bot.keyboards.topic_select_for_restore(p["topics"]),
     )
 
@@ -347,7 +347,7 @@ def _render_question_select_for_restore(
 ) -> game.schemas.GameResponse:
     return _make(
         cid,
-        "♻️ Select a question to restore:",
+        "♻️ Выберите вопрос для восстановления:",
         keyboard=bot.keyboards.question_select_for_restore(p["questions"]),
     )
 
@@ -356,33 +356,33 @@ def _render_help(cid: int, _p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
-            "📋 Available Commands\n\n"
-            "🏠 Group Chat Commands:\n"
-            "  /start — Create a new game\n"
-            "  /join — Join as a player\n"
-            "  /spectate — Watch the game\n"
-            "  /leave — Leave the game\n"
-            "  /start_game — Start the game (host)\n"
-            "  /stop — Stop the game (host)\n"
-            "  /score — Show current scores\n\n"
-            "💬 Private Chat Commands:\n"
-            "  /my_games — Your hosted games\n"
-            "  /add_topic <name> — Create a topic\n"
-            "  /add_question — Add a question\n"
-            "  /delete_topic — Hide a topic\n"
-            "  /delete_question — Hide a question\n"
-            "  /restore_topic — Restore a hidden topic\n"
-            "  /restore_question — Restore a hidden question\n"
-            "  /shop — Browse the item shop\n"
-            "  /balance — Check your balance\n\n"
-            "ℹ️ Available Everywhere:\n"
-            "  /help — This message\n"
-            "  /rules — Game rules\n\n"
-            "🎲 Special Mechanics:\n"
-            "  🎲 Cat in a Bag — random question "
-            "from any topic at a surprise cost\n"
-            "  ⚡ ALL-IN — double-or-nothing bet "
-            "for losing players (once per game)"
+            "📋 Доступные команды\n\n"
+            "🏠 В групповом чате:\n"
+            "  /start — Создать новую игру\n"
+            "  /join — Войти в игру игроком\n"
+            "  /spectate — Смотреть игру\n"
+            "  /leave — Выйти из игры\n"
+            "  /start_game — Начать игру (ведущий)\n"
+            "  /stop — Остановить игру (ведущий)\n"
+            "  /score — Показать счёт\n\n"
+            "💬 В личке с ботом:\n"
+            "  /my_games — Ваши игры\n"
+            "  /add_topic <название> — Создать тему\n"
+            "  /add_question — Добавить вопрос\n"
+            "  /delete_topic — Скрыть тему\n"
+            "  /delete_question — Скрыть вопрос\n"
+            "  /restore_topic — Восстановить тему\n"
+            "  /restore_question — Восстановить вопрос\n"
+            "  /shop — Магазин предметов\n"
+            "  /balance — Ваш баланс\n\n"
+            "ℹ️ Везде:\n"
+            "  /help — Это сообщение\n"
+            "  /rules — Правила игры\n\n"
+            "🎲 Особые механики:\n"
+            "  🎲 Кот в мешке — случайный вопрос "
+            "из любой темы по неожиданной стоимости\n"
+            "  ⚡ Ва-банк — удвоение очков за верный ответ "
+            "или обнуление за ошибку (раз за игру, для отстающих)"
         ),
     )
 
@@ -391,44 +391,45 @@ def _render_rules(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
-            "📖 Jeopardy Game Rules\n\n"
-            "1️⃣ The host creates a game with /start\n"
-            "2️⃣ Players join with /join\n"
-            "3️⃣ Host starts the game with /start_game\n"
-            "4️⃣ A random player picks a question "
-            "from the board\n"
-            "5️⃣ The question appears for everyone\n"
-            f"6️⃣ Players have "
-            f"{p['buzzer_timeout']}s to press 🔔 Buzzer\n"
-            f"7️⃣ First to buzz gets "
-            f"{p['answer_timeout']}s to answer\n"
-            "8️⃣ ✅ Correct → +points, "
-            "you pick next question\n"
-            "9️⃣ ❌ Wrong → −points, "
-            "question is burned\n"
-            "🔟 Game ends when all questions "
-            "are answered\n\n"
-            "🎲 Cat in a Bag — pick the mystery "
-            "button on the board to get a random "
-            "question from any topic at a surprise cost!\n\n"
-            "⚡ ALL-IN — if your score is less than "
-            "half the leader's, you can go all-in "
-            "after buzzing. Correct = double points, "
-            "wrong = score drops to 0! Once per game.\n\n"
-            "🏆 Player with the most points wins!"
+            "📖 Правила игры «Своя игра»\n\n"
+            "1️⃣ Ведущий создаёт игру командой /start\n"
+            "2️⃣ Игроки входят командой /join\n"
+            "3️⃣ Ведущий начинает игру командой /start_game\n"
+            "4️⃣ Случайный игрок выбирает вопрос "
+            "на табло\n"
+            "5️⃣ Вопрос показывается всем\n"
+            f"6️⃣ У игроков "
+            f"{p['buzzer_timeout']} сек, чтобы нажать 🔔 Звонок\n"
+            f"7️⃣ Первый нажавший получает "
+            f"{p['answer_timeout']} сек на ответ\n"
+            "8️⃣ ✅ Верно → +очки, "
+            "выбираете следующий вопрос\n"
+            "9️⃣ ❌ Неверно → −очки, "
+            "вопрос сгорает\n"
+            "🔟 Игра заканчивается, когда все вопросы "
+            "отыграны\n\n"
+            "🎲 Кот в мешке — нажмите загадочную кнопку "
+            "на табло, чтобы получить случайный вопрос "
+            "из любой темы по неожиданной стоимости!\n\n"
+            "⚡ Ва-банк — если очков меньше половины от лидера, "
+            "после нажатия звонка можно идти ва-банк: "
+            "верно = удвоение очков, неверно = счёт обнуляется! Раз за игру.\n\n"
+            "🏆 Побеждает игрок с наибольшим количеством очков!"
         ),
     )
 
 
 def _render_my_games(cid: int, p: _P) -> game.schemas.GameResponse:
     games = p["games"]
-    lines = ["🎮 Your Active Games\n"]
+    lines = ["🎮 Ваши активные игры\n"]
     status_icons = {"waiting": "⏳", "active": "🎯"}
+    status_labels = {"waiting": "Ожидание", "active": "Идёт"}
     for i, g in enumerate(games, 1):
         icon = status_icons.get(g["status"], "❓")
+        label = status_labels.get(g["status"], str(g["status"]))
         lines.append(
-            f"{i}. {icon} {g['status'].title()}"
-            f" | 👥 {g['player_count']} player(s)"
+            f"{i}. {icon} {label}"
+            f" | 👥 {g['player_count']} игрок(ов)"
             f" | 📅 {g['created_at']}"
         )
     kb = bot.keyboards.my_games_jump_buttons(games)
@@ -437,14 +438,14 @@ def _render_my_games(cid: int, p: _P) -> game.schemas.GameResponse:
 
 def _render_private_only_command(cid: int, p: _P) -> game.schemas.GameResponse:
     bot_username = p.get("bot_username", "")
-    text = "❌ This command only works in private chat with me."
+    text = "❌ Эта команда работает только в личке со мной."
     kb: list[list[dict[str, str]]] | None = None
     if bot_username:
-        text += f" DM me: @{bot_username}"
+        text += f" Напишите мне: @{bot_username}"
         kb = [
             [
                 {
-                    "text": "📩 Open DM",
+                    "text": "📩 Открыть личку",
                     "url": f"https://t.me/{bot_username}",
                 }
             ]
@@ -456,7 +457,7 @@ def _render_shop_redirect(cid: int, p: _P) -> game.schemas.GameResponse:
     bot_username = p.get("bot_username", "")
     return _make(
         cid,
-        "🛒 Open the shop in a private chat to browse items!",
+        "🛒 Откройте магазин в личке со мной, чтобы просмотреть товары!",
         keyboard=bot.keyboards.shop_redirect_button(bot_username)
         if bot_username
         else None,
@@ -469,10 +470,10 @@ def _render_shop_main(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
-            f"🛒 Welcome to the Shop!\n\n"
-            f"💰 Your balance: {balance} pts\n"
-            f"📦 Items in inventory: {item_count}\n\n"
-            f"Choose a category:"
+            f"🛒 Добро пожаловать в магазин!\n\n"
+            f"💰 Ваш баланс: {balance} очк.\n"
+            f"📦 Предметов в инвентаре: {item_count}\n\n"
+            f"Выберите категорию:"
         ),
         keyboard=bot.keyboards.shop_main(),
     )
@@ -489,7 +490,7 @@ def _render_shop_category(cid: int, p: _P) -> game.schemas.GameResponse:
         lines.append(
             f"{item.emoji} {item.name} — {item.price}💰\n    {item.description}"
         )
-    lines.append(f"\n💰 Your balance: {balance} pts")
+    lines.append(f"\n💰 Ваш баланс: {balance} очк.")
 
     return _make(
         cid,
@@ -504,8 +505,8 @@ def _render_shop_buy_ok(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
-            f"✅ Purchased {item.emoji} {item.name}!\n\n"
-            f"💰 Remaining balance: {new_balance} pts"
+            f"✅ Куплено: {item.emoji} {item.name}!\n\n"
+            f"💰 Остаток: {new_balance} очк."
         ),
         keyboard=bot.keyboards.shop_main(),
     )
@@ -517,10 +518,10 @@ def _render_shop_insufficient(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
-            f"❌ Not enough balance!\n\n"
-            f"{item.emoji} {item.name} costs {item.price}💰\n"
-            f"💰 Your balance: {balance} pts\n"
-            f"📉 Need {item.price - balance} more pts"
+            f"❌ Недостаточно очков!\n\n"
+            f"{item.emoji} {item.name} стоит {item.price}💰\n"
+            f"💰 Ваш баланс: {balance} очк.\n"
+            f"📉 Нужно ещё {item.price - balance} очк."
         ),
         keyboard=bot.keyboards.shop_main(),
     )
@@ -529,13 +530,13 @@ def _render_shop_insufficient(cid: int, p: _P) -> game.schemas.GameResponse:
 def _render_inventory_list(cid: int, p: _P) -> game.schemas.GameResponse:
     items = p["items"]
     remaining = p.get("remaining_seconds", 0)
-    lines = [f"📦 Your Inventory (⏱ {remaining}s remaining)\n"]
+    lines = [f"📦 Ваш инвентарь (⏱ осталось {remaining} сек)\n"]
     for item in items:
         count = f" x{item['count']}" if item["count"] > 1 else ""
         lines.append(
             f"{item['emoji']} {item['name']}{count} — {item['description']}"
         )
-    lines.append("\nTap an item to use it:")
+    lines.append("\nНажмите на предмет, чтобы использовать:")
     return _make(
         cid,
         "\n".join(lines),
@@ -546,8 +547,8 @@ def _render_inventory_list(cid: int, p: _P) -> game.schemas.GameResponse:
 def _render_inventory_empty(cid: int, _p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
-        "📦 Your inventory is empty! Visit /shop to buy items."
-        "\n\nType your answer now!",
+        "📦 Инвентарь пуст! Зайдите в /shop, чтобы купить предметы."
+        "\n\nВведите ответ!",
         keyboard=bot.keyboards.buzzer_with_inventory(),
     )
 
@@ -561,8 +562,8 @@ def _render_item_used_group(cid: int, p: _P) -> game.schemas.GameResponse:
     name = p["name"]
     remaining = p.get("remaining_seconds", 0)
     effect_text = p.get("effect_text", "")
-    text = effect_text if effect_text else f"✨ {emoji} {name} was used!"
-    text += f"\n⏱ {remaining}s remaining"
+    text = effect_text if effect_text else f"✨ {emoji} {name} использован!"
+    text += f"\n⏱ Осталось {remaining} сек"
     return _make(
         cid,
         text,
@@ -575,7 +576,7 @@ def _render_balance_info(cid: int, p: _P) -> game.schemas.GameResponse:
     item_count = p.get("item_count", 0)
     return _make(
         cid,
-        (f"💰 Balance: {balance} pts\n📦 Items: {item_count}"),
+        (f"💰 Баланс: {balance} очк.\n📦 Предметов: {item_count}"),
     )
 
 
@@ -585,57 +586,59 @@ def _render_daily_reward_claimed(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
-            f"🎁 Daily reward claimed!\n\n"
-            f"💰 +{amount} pts\n"
-            f"💰 New balance: {new_balance} pts"
+            f"🎁 Ежедневная награда получена!\n\n"
+            f"💰 +{amount} очк.\n"
+            f"💰 Новый баланс: {new_balance} очк."
         ),
     )
 
 
 _SIMPLE_VIEWS: dict[game.constants.ViewName, str] = {
     game.constants.ViewName.NO_ACTIVE_GAME: (
-        "🎮 No active game here. Use /start to create one!"
+        "🎮 Здесь нет активной игры. Создайте её командой /start!"
     ),
     game.constants.ViewName.NO_ACTIVE_GAME_HERE: (
-        "🤷 No active game in this chat."
+        "🤷 В этом чате нет активной игры."
     ),
     game.constants.ViewName.GAME_ALREADY_RUNNING: (
-        "⚠️ A game is already running in this chat!"
+        "⚠️ В этом чате уже идёт игра!"
     ),
     game.constants.ViewName.GAME_ALREADY_STARTED: (
-        "⏳ Game already started. Wait for the next round!"
+        "⏳ Игра уже началась. Ждите следующего раунда!"
     ),
     game.constants.ViewName.GAME_IN_PROGRESS: (
-        "🕹 Game is already in progress!"
+        "🕹 Игра уже идёт!"
     ),
-    game.constants.ViewName.ONLY_HOST: ("🚫 Only the host can do this action."),
+    game.constants.ViewName.ONLY_HOST: (
+        "🚫 Только ведущий может выполнить это действие."
+    ),
     game.constants.ViewName.NEED_TWO_PLAYERS: (
-        "👥 Need at least 2 players to start. Invite more friends!"
+        "👥 Нужно минимум 2 игрока. Позовите друзей!"
     ),
     game.constants.ViewName.NO_QUESTIONS: (
-        "📭 No questions in the database. Add some first!"
+        "📭 В базе нет вопросов. Добавьте их сначала!"
     ),
     game.constants.ViewName.NOT_YOUR_TURN: (
-        "🙅 It's not your turn to choose a question."
+        "🙅 Сейчас не ваш ход выбирать вопрос."
     ),
-    game.constants.ViewName.DIALOG_PROMPT_TOPIC: ("📝 Enter the topic name:"),
+    game.constants.ViewName.DIALOG_PROMPT_TOPIC: ("📝 Введите название темы:"),
     game.constants.ViewName.DIALOG_PROMPT_QUESTION: (
-        "✏️ Send the question text:"
+        "✏️ Отправьте текст вопроса:"
     ),
     game.constants.ViewName.DIALOG_PROMPT_ANSWER: (
-        "💡 Now send the correct answer:"
+        "💡 Теперь отправьте правильный ответ:"
     ),
     game.constants.ViewName.DIALOG_PROMPT_COST: (
-        "💰 Enter the point cost (e.g. 100, 200, 500):"
+        "💰 Введите стоимость в очках (напр. 100, 200, 500):"
     ),
-    game.constants.ViewName.DIALOG_CANCELLED: "❌ Cancelled.",
-    game.constants.ViewName.DIALOG_DONE: "✅ Done!",
+    game.constants.ViewName.DIALOG_CANCELLED: "❌ Отменено.",
+    game.constants.ViewName.DIALOG_DONE: "✅ Готово!",
     game.constants.ViewName.DB_ERROR: (game.constants.BotMessage.DB_ERROR),
     game.constants.ViewName.UNKNOWN_COMMAND: (
-        "🤔 Unknown command. Use /help to see what I can do!"
+        "🤔 Неизвестная команда. Напишите /help, чтобы увидеть список!"
     ),
     game.constants.ViewName.GROUP_ONLY_COMMAND: (
-        "❌ This command only works in group chats. Add me to a group to play!"
+        "❌ Эта команда только для групп. Добавьте меня в группу, чтобы играть!"
     ),
 }
 
@@ -648,13 +651,13 @@ def _render_simple_with_username(
 
 _USERNAME_VIEWS: dict[game.constants.ViewName, str] = {
     game.constants.ViewName.ALREADY_IN_GAME: (
-        "ℹ️ {username}, you're already in the game!"
+        "ℹ️ {username}, вы уже в игре!"
     ),
     game.constants.ViewName.ALREADY_SPECTATING: (
-        "ℹ️ {username}, you're already spectating!"
+        "ℹ️ {username}, вы уже смотрите игру!"
     ),
     game.constants.ViewName.NOT_IN_GAME: (
-        "🤔 {username}, you're not in this game."
+        "🤔 {username}, вы не в этой игре."
     ),
 }
 
@@ -763,7 +766,7 @@ def render(
             if username_template is not None:
                 result = _render_simple_with_username(cid, p, username_template)
             else:
-                result = _make(cid, "⚠️ Something unexpected happened.")
+                result = _make(cid, "⚠️ Произошла непредвиденная ошибка.")
 
     if response.edit_message_id is not None:
         result.edit_message_id = response.edit_message_id

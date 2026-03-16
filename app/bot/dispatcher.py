@@ -70,7 +70,7 @@ class Dispatcher:
         text = msg.text.strip()
         user = msg.from_user
         telegram_id = user.id if user else 0
-        username = user.first_name if user else "Unknown"
+        username = user.first_name if user else "Неизвестный"
         is_private = msg.chat.type == "private"
 
         if is_private and self._dialog.has_active(telegram_id):
@@ -270,7 +270,7 @@ class Dispatcher:
             return [
                 game.schemas.GameResponse(
                     chat_id=chat_id,
-                    text="⚠️ Topic name cannot be empty. Try again:",
+                    text="⚠️ Название темы не может быть пустым. Попробуйте снова:",
                 )
             ]
         responses = await self._content.handle_add_topic(
@@ -292,7 +292,7 @@ class Dispatcher:
             return [
                 game.schemas.GameResponse(
                     chat_id=chat_id,
-                    text="⚠️ Must be a number. Try again:",
+                    text="⚠️ Нужно число. Попробуйте снова:",
                 )
             ]
         responses = await self._content.handle_add_question(

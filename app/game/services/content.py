@@ -52,7 +52,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="⚠️ Topic already exists.",
+                        text="⚠️ Такая тема уже есть.",
                     )
                 ]
 
@@ -70,7 +70,7 @@ class ContentService:
                 _result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
-                    text=f"✅ Topic «{topic_name}» created!",
+                    text=f"✅ Тема «{topic_name}» создана!",
                 )
             ]
 
@@ -95,7 +95,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="⚠️ Invalid topic ID.",
+                        text="⚠️ Неверный ID темы.",
                     )
                 ]
 
@@ -121,9 +121,9 @@ class ContentService:
                     chat_id,
                     game.constants.ViewName.PLAIN,
                     text=(
-                        f"✅ Question added "
-                        f"(#{question_count} in topic), "
-                        f"worth {cost} points!"
+                        f"✅ Вопрос добавлен "
+                        f"(№{question_count} в теме), "
+                        f"стоимость {cost} очков!"
                     ),
                 )
             ]
@@ -142,8 +142,8 @@ class ContentService:
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text=(
-                            "📭 No topics yet. "
-                            "Create one with /add_topic <name>"
+                            "📭 Тем пока нет. "
+                            "Создайте: /add_topic <название>"
                         ),
                     )
                 ]
@@ -172,7 +172,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="📭 No topics to delete.",
+                        text="📭 Нет тем для удаления.",
                     )
                 ]
 
@@ -201,7 +201,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="⚠️ Invalid topic ID.",
+                        text="⚠️ Неверный ID темы.",
                     )
                 ]
 
@@ -211,7 +211,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="⚠️ Topic not found.",
+                        text="⚠️ Тема не найдена.",
                     )
                 ]
 
@@ -221,7 +221,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="⚠️ User not found.",
+                        text="⚠️ Пользователь не найден.",
                     )
                 ]
 
@@ -230,7 +230,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="🚫 You can only delete topics you created.",
+                        text="🚫 Удалять можно только созданные вами темы.",
                     )
                 ]
 
@@ -247,8 +247,8 @@ class ContentService:
                     chat_id,
                     game.constants.ViewName.PLAIN,
                     text=(
-                        f"🗑 Topic «{topic.title}» hidden. "
-                        f"Use /restore_topic to restore it."
+                        f"🗑 Тема «{topic.title}» скрыта. "
+                        f"Восстановить: /restore_topic"
                     ),
                 )
             ]
@@ -269,7 +269,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="📭 No topics with questions to delete.",
+                        text="📭 Нет тем с вопросами для удаления.",
                     )
                 ]
 
@@ -296,7 +296,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="⚠️ Invalid topic ID.",
+                        text="⚠️ Неверный ID темы.",
                     )
                 ]
 
@@ -306,7 +306,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="📭 No questions in this topic.",
+                        text="📭 В этой теме нет вопросов.",
                     )
                 ]
 
@@ -335,7 +335,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="⚠️ Invalid question ID.",
+                        text="⚠️ Неверный ID вопроса.",
                     )
                 ]
 
@@ -345,7 +345,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="⚠️ Question not found.",
+                        text="⚠️ Вопрос не найден.",
                     )
                 ]
 
@@ -355,7 +355,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="⚠️ User not found.",
+                        text="⚠️ Пользователь не найден.",
                     )
                 ]
 
@@ -367,7 +367,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="🚫 You can only delete questions you created.",
+                        text="🚫 Удалять можно только созданные вами вопросы.",
                     )
                 ]
 
@@ -384,8 +384,8 @@ class ContentService:
                     chat_id,
                     game.constants.ViewName.PLAIN,
                     text=(
-                        "🗑 Question hidden. "
-                        "Use /restore_question to restore it."
+                        "🗑 Вопрос скрыт. "
+                        "Восстановить: /restore_question"
                     ),
                 )
             ]
@@ -409,7 +409,7 @@ class ContentService:
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text=(
-                            "🎮 No games yet. Add me to a group and use /start!"
+                            "🎮 Игр пока нет. Добавьте меня в группу и напишите /start!"
                         ),
                     )
                 ]
@@ -420,7 +420,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="🎮 No active hosted games.",
+                        text="🎮 Нет активных игр, где вы ведущий.",
                     )
                 ]
 
@@ -480,7 +480,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="⚠️ User not found.",
+                        text="⚠️ Пользователь не найден.",
                     )
                 ]
 
@@ -490,7 +490,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="📭 No hidden topics to restore.",
+                        text="📭 Нет скрытых тем для восстановления.",
                     )
                 ]
 
@@ -519,7 +519,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="⚠️ Invalid topic ID.",
+                        text="⚠️ Неверный ID темы.",
                     )
                 ]
 
@@ -529,7 +529,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="⚠️ Topic not found.",
+                        text="⚠️ Тема не найдена.",
                     )
                 ]
 
@@ -539,7 +539,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="⚠️ User not found.",
+                        text="⚠️ Пользователь не найден.",
                     )
                 ]
 
@@ -548,7 +548,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="🚫 You can only restore topics you created.",
+                        text="🚫 Восстанавливать можно только созданные вами темы.",
                     )
                 ]
 
@@ -564,7 +564,7 @@ class ContentService:
                 _result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
-                    text=f"✅ Topic «{topic.title}» restored!",
+                    text=f"✅ Тема «{topic.title}» восстановлена!",
                 )
             ]
 
@@ -583,7 +583,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="⚠️ User not found.",
+                        text="⚠️ Пользователь не найден.",
                     )
                 ]
 
@@ -593,7 +593,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="📭 No hidden questions to restore.",
+                        text="📭 Нет скрытых вопросов для восстановления.",
                     )
                 ]
 
@@ -622,7 +622,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="⚠️ Invalid question ID.",
+                        text="⚠️ Неверный ID вопроса.",
                     )
                 ]
 
@@ -632,7 +632,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="⚠️ Question not found.",
+                        text="⚠️ Вопрос не найден.",
                     )
                 ]
 
@@ -642,7 +642,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="⚠️ User not found.",
+                        text="⚠️ Пользователь не найден.",
                     )
                 ]
 
@@ -654,7 +654,7 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="🚫 You can only restore questions you created.",
+                        text="🚫 Восстанавливать можно только созданные вами вопросы.",
                     )
                 ]
 
@@ -670,6 +670,6 @@ class ContentService:
                 _result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
-                    text="✅ Question restored!",
+                    text="✅ Вопрос восстановлен!",
                 )
             ]

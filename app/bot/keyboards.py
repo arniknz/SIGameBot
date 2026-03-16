@@ -12,52 +12,52 @@ def lobby(bot_username: str = "") -> list[list[dict[str, str]]]:
     shop_btn: dict[str, str]
     if bot_username:
         shop_btn = {
-            "text": "🛒 Shop",
+            "text": "🛒 Магазин",
             "url": f"https://t.me/{bot_username}?start=shop",
         }
     else:
         shop_btn = {
-            "text": "🛒 Shop",
+            "text": "🛒 Магазин",
             "callback_data": game.constants.Callback.SHOP,
         }
     rules_btn: dict[str, str]
     help_btn: dict[str, str]
     if bot_username:
         rules_btn = {
-            "text": "\U0001f4d6 Rules",
+            "text": "\U0001f4d6 Правила",
             "url": f"https://t.me/{bot_username}?start=rules",
         }
         help_btn = {
-            "text": "\u2753 Help",
+            "text": "\u2753 Справка",
             "url": f"https://t.me/{bot_username}?start=help",
         }
     else:
         rules_btn = {
-            "text": "\U0001f4d6 Rules",
+            "text": "\U0001f4d6 Правила",
             "callback_data": game.constants.Callback.RULES,
         }
         help_btn = {
-            "text": "\u2753 Help",
+            "text": "\u2753 Справка",
             "callback_data": game.constants.Callback.HELP,
         }
     return [
         [
             {
-                "text": "\U0001f3ae Join",
+                "text": "\U0001f3ae Войти",
                 "callback_data": game.constants.Callback.JOIN,
             },
             {
-                "text": "\U0001f440 Spectate",
+                "text": "\U0001f440 Смотреть",
                 "callback_data": game.constants.Callback.SPECTATE,
             },
         ],
         [
             {
-                "text": "\U0001f6aa Leave",
+                "text": "\U0001f6aa Выйти",
                 "callback_data": game.constants.Callback.LEAVE,
             },
             {
-                "text": "\U0001f3ac Start Game",
+                "text": "\U0001f3ac Начать игру",
                 "callback_data": game.constants.Callback.START_GAME,
             },
         ],
@@ -69,7 +69,7 @@ def buzzer() -> list[list[dict[str, str]]]:
     return [
         [
             {
-                "text": "🔔 Buzzer",
+                "text": "🔔 Звонок",
                 "callback_data": game.constants.Callback.BUZZER,
             }
         ]
@@ -80,7 +80,7 @@ def buzzer_with_inventory() -> list[list[dict[str, str]]]:
     return [
         [
             {
-                "text": "📦 Inventory",
+                "text": "📦 Инвентарь",
                 "callback_data": game.constants.Callback.INVENTORY,
             }
         ]
@@ -106,7 +106,7 @@ def score() -> list[list[dict[str, str]]]:
                 "callback_data": game.constants.Callback.LEAVE,
             },
             {
-                "text": "⏹ Stop",
+                "text": "⏹ Стоп",
                 "callback_data": game.constants.Callback.STOP,
             },
         ]
@@ -136,7 +136,7 @@ def board(
         kb.append(
             [
                 {
-                    "text": "🎲 Cat in a Bag",
+                    "text": "🎲 Кот в мешке",
                     "callback_data": game.constants.Callback.CAT_IN_BAG,
                 }
             ]
@@ -153,7 +153,7 @@ def board_text(
     lines: list[str] = []
     for topic, costs in by_topic.items():
         lines.append(f"{topic}: {' | '.join(str(c) for c in sorted(costs))}")
-    return "\n".join(lines) if lines else "No questions remaining."
+    return "\n".join(lines) if lines else "Вопросов не осталось."
 
 
 def topic_select_for_add(
@@ -173,7 +173,7 @@ def topic_select_for_add(
     kb.append(
         [
             {
-                "text": "❌ Cancel",
+                "text": "❌ Отмена",
                 "callback_data": (
                     f"{game.constants.CallbackPrefix.ADD_QUESTION_TOPIC}:{game.constants.Callback.CANCEL}"
                 ),
@@ -193,7 +193,7 @@ def topic_select_for_delete(
         kb.append(
             [
                 {
-                    "text": f"🗑 {topic.title} ({count} questions)",
+                    "text": f"🗑 {topic.title} ({count} вопр.)",
                     "callback_data": (
                         f"{game.constants.CallbackPrefix.DELETE_TOPIC}:{topic.id}"
                     ),
@@ -203,7 +203,7 @@ def topic_select_for_delete(
     kb.append(
         [
             {
-                "text": "❌ Cancel",
+                "text": "❌ Отмена",
                 "callback_data": (
                     f"{game.constants.CallbackPrefix.DELETE_TOPIC}:{game.constants.Callback.CANCEL}"
                 ),
@@ -235,7 +235,7 @@ def topic_select_for_delete_question(
     kb.append(
         [
             {
-                "text": "❌ Cancel",
+                "text": "❌ Отмена",
                 "callback_data": (
                     f"{game.constants.CallbackPrefix.DELETE_QUESTION_TOPIC}:{game.constants.Callback.CANCEL}"
                 ),
@@ -257,7 +257,7 @@ def dm_bot_button(
 ) -> list[dict[str, str]]:
     return [
         {
-            "text": "📩 Manage content in DM",
+            "text": "📩 Управление в личке",
             "url": f"https://t.me/{bot_username}?start=help",
         }
     ]
@@ -270,7 +270,7 @@ def my_games_jump_buttons(
     for i, g in enumerate(games, 1):
         url = _supergroup_url(int(str(g["chat_id"])))
         if url:
-            kb.append([{"text": f"🔗 Jump to game #{i}", "url": url}])
+            kb.append([{"text": f"🔗 К игре #{i}", "url": url}])
     return kb
 
 
@@ -294,7 +294,7 @@ def question_select_for_delete(
     kb.append(
         [
             {
-                "text": "❌ Cancel",
+                "text": "❌ Отмена",
                 "callback_data": (
                     f"{game.constants.CallbackPrefix.DELETE_QUESTION_CONFIRM}"
                     f":{game.constants.Callback.CANCEL}"
@@ -322,7 +322,7 @@ def topic_select_for_restore(
     kb.append(
         [
             {
-                "text": "❌ Cancel",
+                "text": "❌ Отмена",
                 "callback_data": (
                     f"{game.constants.CallbackPrefix.RESTORE_TOPIC}"
                     f":{game.constants.Callback.CANCEL}"
@@ -353,7 +353,7 @@ def question_select_for_restore(
     kb.append(
         [
             {
-                "text": "❌ Cancel",
+                "text": "❌ Отмена",
                 "callback_data": (
                     f"{game.constants.CallbackPrefix.RESTORE_QUESTION}"
                     f":{game.constants.Callback.CANCEL}"
@@ -405,7 +405,7 @@ def shop_category(
     kb.append(
         [
             {
-                "text": "⬅️ Back to shop",
+                "text": "⬅️ В магазин",
                 "callback_data": game.constants.Callback.SHOP,
             }
         ]
@@ -419,7 +419,7 @@ def shop_redirect_button(
     return [
         [
             {
-                "text": "🛒 Open Shop",
+                "text": "🛒 Открыть магазин",
                 "url": f"https://t.me/{bot_username}?start=shop",
             }
         ]

@@ -248,7 +248,7 @@ class TimerService:
 
         effective_cost = game_state.cost_override or original_cost
 
-        buzzer_holder_name = "Unknown"
+        buzzer_holder_name = "Неизвестный"
         if game_state.buzzer_pressed_by:
             buzzer_player = await participant_repo.get_active_player_by_id(
                 active_game.id,
@@ -263,7 +263,7 @@ class TimerService:
                 user_repo = db.repositories.user.UserRepository(session)
                 buzzer_user = await user_repo.get_by_id(buzzer_player.user_id)
                 buzzer_holder_name = (
-                    buzzer_user.username if buzzer_user else "Unknown"
+                    buzzer_user.username if buzzer_user else "Неизвестный"
                 )
 
         question_in_game.status = game.constants.QuestionInGameStatus.ANSWERED
