@@ -48,6 +48,44 @@ def _render_game_created(cid: int, p: _P) -> game.schemas.GameResponse:
     )
 
 
+def _render_lobby(cid: int, p: _P) -> game.schemas.GameResponse:
+    roster = p["roster"]
+    bot_username = p.get("bot_username", "")
+
+    players = [
+        (name, is_host)
+        for name, role, is_host in roster
+        if role == game.constants.ParticipantRole.PLAYER
+    ]
+    spectators = [
+        name
+        for name, role, _is_host in roster
+        if role == game.constants.ParticipantRole.SPECTATOR
+    ]
+
+    lines = ["🎲 Jeopardy Game\n"]
+    lines.append(f"👥 Players ({len(players)}):")
+    for name, is_host in players:
+        tag = "👑" if is_host else "🎯"
+        suffix = " (host)" if is_host else ""
+        lines.append(f"  {tag} {name}{suffix}")
+
+    if spectators:
+        lines.append(f"\n👀 Spectators ({len(spectators)}):")
+        for name in spectators:
+            lines.append(f"  👀 {name}")
+
+    if len(players) < 2:
+        lines.append("\n⏳ Need at least 2 players to start.")
+    else:
+        lines.append("\n🕹 Ready to start! Host can press Start Game.")
+
+    kb = bot.keyboards.lobby(bot_username)
+    if bot_username:
+        kb.append(bot.keyboards.dm_bot_button(bot_username))
+    return _make(cid, "\n".join(lines), keyboard=kb)
+
+
 def _render_player_joined(cid: int, p: _P) -> game.schemas.GameResponse:
     names = p["player_names"]
     return _make(
@@ -229,6 +267,17 @@ def _render_choosing_timeout(cid: int, p: _P) -> game.schemas.GameResponse:
             f"to choose a question!\n"
             f"🔄 Skipping to the next player..."
         ),
+    )
+
+
+def _render_game_ended_no_players(cid: int, _p: _P) -> game.schemas.GameResponse:
+    return _make(
+        cid,
+        (
+            "\U0001f3c1 Game ended. No players remaining.\n\n"
+            "To create a new game, send /start"
+        ),
+        keyboard=[],
     )
 
 
@@ -582,9 +631,6 @@ _SIMPLE_VIEWS: dict[game.constants.ViewName, str] = {
     game.constants.ViewName.DIALOG_CANCELLED: "❌ Cancelled.",
     game.constants.ViewName.DIALOG_DONE: "✅ Done!",
     game.constants.ViewName.DB_ERROR: (game.constants.BotMessage.DB_ERROR),
-    game.constants.ViewName.GAME_ENDED_NO_PLAYERS: (
-        "🏚 No players remain — game ended."
-    ),
     game.constants.ViewName.UNKNOWN_COMMAND: (
         "🤔 Unknown command. Use /help to see what I can do!"
     ),
@@ -612,9 +658,32 @@ _USERNAME_VIEWS: dict[game.constants.ViewName, str] = {
     ),
 }
 
+_ALERT_VIEWS: frozenset[game.constants.ViewName] = frozenset(
+    {
+        game.constants.ViewName.NO_ACTIVE_GAME,
+        game.constants.ViewName.NO_ACTIVE_GAME_HERE,
+        game.constants.ViewName.GAME_ALREADY_RUNNING,
+        game.constants.ViewName.GAME_ALREADY_STARTED,
+        game.constants.ViewName.GAME_IN_PROGRESS,
+        game.constants.ViewName.ONLY_HOST,
+        game.constants.ViewName.NEED_TWO_PLAYERS,
+        game.constants.ViewName.NO_QUESTIONS,
+        game.constants.ViewName.NOT_YOUR_TURN,
+        game.constants.ViewName.ALREADY_IN_GAME,
+        game.constants.ViewName.ALREADY_SPECTATING,
+        game.constants.ViewName.NOT_IN_GAME,
+        game.constants.ViewName.PLAYER_JOINED,
+        game.constants.ViewName.PLAYER_REJOINED,
+        game.constants.ViewName.NOW_SPECTATING,
+        game.constants.ViewName.LEFT_GAME,
+        game.constants.ViewName.HOST_TRANSFERRED,
+    }
+)
+
 
 _RENDERERS: dict[game.constants.ViewName, Renderer] = {
     game.constants.ViewName.GAME_CREATED: _render_game_created,
+    game.constants.ViewName.LOBBY: _render_lobby,
     game.constants.ViewName.PLAYER_JOINED: _render_player_joined,
     game.constants.ViewName.PLAYER_REJOINED: _render_player_rejoined,
     game.constants.ViewName.NOW_SPECTATING: _render_now_spectating,
@@ -631,6 +700,9 @@ _RENDERERS: dict[game.constants.ViewName, Renderer] = {
     game.constants.ViewName.BUZZER_TIMEOUT: _render_buzzer_timeout,
     game.constants.ViewName.ANSWER_TIMEOUT: _render_answer_timeout,
     game.constants.ViewName.CHOOSING_TIMEOUT: _render_choosing_timeout,
+    game.constants.ViewName.GAME_ENDED_NO_PLAYERS: (
+        _render_game_ended_no_players
+    ),
     game.constants.ViewName.GAME_ENDED_AFK: _render_game_ended_afk,
     game.constants.ViewName.TOPIC_SELECT_FOR_ADD: (
         _render_topic_select_for_add
@@ -695,4 +767,8 @@ def render(
 
     if response.edit_message_id is not None:
         result.edit_message_id = response.edit_message_id
+    if view in _ALERT_VIEWS or response.is_alert:
+        result.is_alert = True
+    if response.lobby_game_id:
+        result.lobby_game_id = response.lobby_game_id
     return result

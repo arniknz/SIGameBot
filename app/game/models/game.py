@@ -173,6 +173,11 @@ class GameStateModel(Base):
         sqlalchemy.Boolean,
         default=False,
     )
+    lobby_message_id: sqlalchemy.orm.Mapped[int | None] = (
+        sqlalchemy.orm.mapped_column(
+            sqlalchemy.BigInteger,
+        )
+    )
     failed_selections_count: sqlalchemy.orm.Mapped[int] = (
         sqlalchemy.orm.mapped_column(
             sqlalchemy.Integer,

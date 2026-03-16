@@ -141,6 +141,38 @@ class ParticipantRepository:
         )
         return (await self._session.execute(statement)).scalar_one_or_none()
 
+    async def get_roster(
+        self,
+        game_id: uuid.UUID,
+        host_user_id: int | None,
+    ) -> list[tuple[str, str, bool]]:
+        statement = (
+            sqlalchemy.select(
+                game.models.UserModel.username,
+                game.models.ParticipantModel.role,
+                game.models.UserModel.id,
+            )
+            .join(
+                game.models.UserModel,
+                game.models.ParticipantModel.user_id
+                == game.models.UserModel.id,
+            )
+            .where(
+                game.models.ParticipantModel.game_id == game_id,
+                game.models.ParticipantModel.is_active.is_(True),
+            )
+            .order_by(game.models.ParticipantModel.joined_at)
+        )
+        rows = (await self._session.execute(statement)).all()
+        return [
+            (
+                username or "Unknown",
+                role,
+                host_user_id is not None and user_id == host_user_id,
+            )
+            for username, role, user_id in rows
+        ]
+
     async def get_max_score(
         self,
         game_id: uuid.UUID,

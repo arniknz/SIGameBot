@@ -20,28 +20,48 @@ def lobby(bot_username: str = "") -> list[list[dict[str, str]]]:
             "text": "🛒 Shop",
             "callback_data": game.constants.Callback.SHOP,
         }
+    rules_btn: dict[str, str]
+    help_btn: dict[str, str]
+    if bot_username:
+        rules_btn = {
+            "text": "\U0001f4d6 Rules",
+            "url": f"https://t.me/{bot_username}?start=rules",
+        }
+        help_btn = {
+            "text": "\u2753 Help",
+            "url": f"https://t.me/{bot_username}?start=help",
+        }
+    else:
+        rules_btn = {
+            "text": "\U0001f4d6 Rules",
+            "callback_data": game.constants.Callback.RULES,
+        }
+        help_btn = {
+            "text": "\u2753 Help",
+            "callback_data": game.constants.Callback.HELP,
+        }
     return [
         [
             {
-                "text": "🎮 Join",
+                "text": "\U0001f3ae Join",
                 "callback_data": game.constants.Callback.JOIN,
             },
             {
-                "text": "👀 Spectate",
+                "text": "\U0001f440 Spectate",
                 "callback_data": game.constants.Callback.SPECTATE,
             },
         ],
         [
-            shop_btn,
             {
-                "text": "📖 Rules",
-                "callback_data": game.constants.Callback.RULES,
+                "text": "\U0001f6aa Leave",
+                "callback_data": game.constants.Callback.LEAVE,
             },
             {
-                "text": "❓ Help",
-                "callback_data": game.constants.Callback.HELP,
+                "text": "\U0001f3ac Start Game",
+                "callback_data": game.constants.Callback.START_GAME,
             },
         ],
+        [shop_btn, rules_btn, help_btn],
     ]
 
 

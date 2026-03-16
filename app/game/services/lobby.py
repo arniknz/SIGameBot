@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import logging
+import uuid
 
 import db.repositories.game
 import db.repositories.participant
@@ -17,12 +18,21 @@ logger = logging.getLogger(__name__)
 
 
 def _result(
-    chat_id: int, view: game.constants.ViewName, **payload: object
+    chat_id: int,
+    view: game.constants.ViewName,
+    *,
+    is_alert: bool = False,
+    edit_message_id: int | None = None,
+    lobby_game_id: str | None = None,
+    **payload: object,
 ) -> game.schemas.ServiceResponse:
     return game.schemas.ServiceResponse(
         chat_id=chat_id,
         view=view,
         payload=dict(payload),
+        is_alert=is_alert,
+        edit_message_id=edit_message_id,
+        lobby_game_id=lobby_game_id,
     )
 
 
@@ -34,6 +44,58 @@ class LobbyService:
     ) -> None:
         self._session_factory = session_factory
         self._question_selection_timeout = question_selection_timeout
+
+    async def store_lobby_message_id(
+        self,
+        game_id_str: str,
+        message_id: int,
+    ) -> None:
+        async with self._session_factory() as session, session.begin():
+            game_repo = db.repositories.game.GameRepository(session)
+            await game_repo.set_lobby_message_id(
+                uuid.UUID(game_id_str), message_id
+            )
+
+    async def _lobby_response(
+        self,
+        session: sqlalchemy.ext.asyncio.AsyncSession,
+        active_game: game.models.GameModel,
+        chat_id: int,
+        bot_username: str = "",
+        *,
+        edit_message_id: int | None = None,
+        lobby_game_id: str | None = None,
+    ) -> game.schemas.ServiceResponse:
+        participant_repo = (
+            db.repositories.participant.ParticipantRepository(session)
+        )
+        roster = await participant_repo.get_roster(
+            active_game.id, active_game.host_id
+        )
+        return _result(
+            chat_id,
+            game.constants.ViewName.LOBBY,
+            edit_message_id=edit_message_id,
+            lobby_game_id=lobby_game_id,
+            roster=roster,
+            bot_username=bot_username,
+        )
+
+    async def _resolve_lobby_message_id(
+        self,
+        session: sqlalchemy.ext.asyncio.AsyncSession,
+        active_game: game.models.GameModel,
+        lobby_message_id: int,
+    ) -> int:
+        game_repo = db.repositories.game.GameRepository(session)
+        game_state = await game_repo.get_state(active_game.id)
+        if game_state is None:
+            return lobby_message_id
+
+        if lobby_message_id and not game_state.lobby_message_id:
+            game_state.lobby_message_id = lobby_message_id
+
+        return lobby_message_id or game_state.lobby_message_id or 0
 
     async def handle_start(
         self,
@@ -79,20 +141,23 @@ class LobbyService:
                 username,
             )
 
-            return [
-                _result(
-                    chat_id,
-                    game.constants.ViewName.GAME_CREATED,
-                    username=username,
-                    bot_username=bot_username,
-                )
-            ]
+            lobby = await self._lobby_response(
+                session,
+                new_game,
+                chat_id,
+                bot_username,
+                lobby_game_id=str(new_game.id),
+            )
+            return [lobby]
 
     async def handle_join(
         self,
         chat_id: int,
         telegram_id: int,
         username: str,
+        bot_username: str = "",
+        *,
+        lobby_message_id: int = 0,
     ) -> list[game.schemas.ServiceResponse]:
         async with self._session_factory() as session, session.begin():
             game_repo = db.repositories.game.GameRepository(session)
@@ -122,6 +187,8 @@ class LobbyService:
             existing = await participant_repo.get_by_telegram_id(
                 active_game.id, telegram_id
             )
+
+            alert_text: str
             if existing is not None:
                 if (
                     existing.is_active
@@ -137,37 +204,41 @@ class LobbyService:
                 existing.is_active = True
                 existing.role = game.constants.ParticipantRole.PLAYER
                 existing.score = 0
+                alert_text = f"🔄 Welcome back, {username}!"
                 logger.info(
                     "%s rejoined game %s (score reset)",
                     username,
                     active_game.id,
                 )
-                return [
-                    _result(
-                        chat_id,
-                        game.constants.ViewName.PLAYER_REJOINED,
-                        username=username,
-                    )
-                ]
+            else:
+                await participant_repo.add(
+                    active_game.id,
+                    user.id,
+                    game.constants.ParticipantRole.PLAYER,
+                )
+                alert_text = "✅ You joined as player!"
+                logger.info("%s joined game %s", username, active_game.id)
 
-            await participant_repo.add(
-                active_game.id,
-                user.id,
-                game.constants.ParticipantRole.PLAYER,
+            edit_id = await self._resolve_lobby_message_id(
+                session, active_game, lobby_message_id
             )
-            player_names = await participant_repo.get_player_usernames(
-                active_game.id
+            lobby = await self._lobby_response(
+                session,
+                active_game,
+                chat_id,
+                bot_username,
+                edit_message_id=edit_id or None,
+                lobby_game_id=str(active_game.id) if not edit_id else None,
             )
-
-            logger.info("%s joined game %s", username, active_game.id)
-
             return [
+                lobby,
                 _result(
                     chat_id,
                     game.constants.ViewName.PLAYER_JOINED,
                     username=username,
-                    player_names=player_names,
-                )
+                    player_names=[],
+                    alert_text=alert_text,
+                ),
             ]
 
     async def handle_spectate(
@@ -175,6 +246,9 @@ class LobbyService:
         chat_id: int,
         telegram_id: int,
         username: str,
+        bot_username: str = "",
+        *,
+        lobby_message_id: int = 0,
     ) -> list[game.schemas.ServiceResponse]:
         async with self._session_factory() as session, session.begin():
             game_repo = db.repositories.game.GameRepository(session)
@@ -210,28 +284,34 @@ class LobbyService:
                     ]
                 existing.role = game.constants.ParticipantRole.SPECTATOR
                 existing.is_active = True
-                return [
-                    _result(
-                        chat_id,
-                        game.constants.ViewName.NOW_SPECTATING,
-                        username=username,
-                    )
-                ]
-
-            await participant_repo.add(
-                active_game.id,
-                user.id,
-                game.constants.ParticipantRole.SPECTATOR,
-            )
+            else:
+                await participant_repo.add(
+                    active_game.id,
+                    user.id,
+                    game.constants.ParticipantRole.SPECTATOR,
+                )
 
             logger.info("%s spectating game %s", username, active_game.id)
 
+            edit_id = await self._resolve_lobby_message_id(
+                session, active_game, lobby_message_id
+            )
+            lobby = await self._lobby_response(
+                session,
+                active_game,
+                chat_id,
+                bot_username,
+                edit_message_id=edit_id or None,
+                lobby_game_id=str(active_game.id) if not edit_id else None,
+            )
             return [
+                lobby,
                 _result(
                     chat_id,
                     game.constants.ViewName.NOW_SPECTATING,
                     username=username,
-                )
+                    alert_text="👀 You are now spectating",
+                ),
             ]
 
     async def handle_leave(
@@ -239,6 +319,9 @@ class LobbyService:
         chat_id: int,
         telegram_id: int,
         username: str,
+        bot_username: str = "",
+        *,
+        lobby_message_id: int = 0,
     ) -> list[game.schemas.ServiceResponse]:
         async with self._session_factory() as session, session.begin():
             game_repo = db.repositories.game.GameRepository(session)
@@ -284,8 +367,10 @@ class LobbyService:
                     username,
                 )
 
+            participant.is_active = False
+            logger.info("%s left game %s", username, active_game.id)
+
             if user and user.id == active_game.host_id:
-                participant.is_active = False
                 remaining = await participant_repo.get_active_players(
                     active_game.id,
                 )
@@ -301,31 +386,50 @@ class LobbyService:
                         new_host_name,
                         active_game.id,
                     )
+                else:
+                    active_game.status = game.constants.GameStatus.FINISHED
+                    active_game.finished_at = datetime.datetime.now(
+                        datetime.UTC
+                    )
+                    game_state = await game_repo.get_state(active_game.id)
+                    if game_state:
+                        game_state.status = game.constants.GamePhase.FINISHED
+                        game_state.timer_ends_at = None
+
+                    edit_id = await self._resolve_lobby_message_id(
+                        session, active_game, lobby_message_id
+                    )
                     return [
                         _result(
                             chat_id,
-                            game.constants.ViewName.HOST_TRANSFERRED,
-                            old_host=username,
-                            new_host=new_host_name,
-                        ),
+                            game.constants.ViewName.GAME_ENDED_NO_PLAYERS,
+                            edit_message_id=edit_id or None,
+                            alert_text=(
+                                "\U0001f6aa Game ended \u2014 "
+                                "no players remaining"
+                            ),
+                        )
                     ]
-                active_game.status = game.constants.GameStatus.FINISHED
-                active_game.finished_at = datetime.datetime.now(datetime.UTC)
-                return [
-                    _result(
-                        chat_id,
-                        game.constants.ViewName.GAME_ENDED_NO_PLAYERS,
-                    ),
-                ]
 
-            participant.is_active = False
-            logger.info("%s left game %s", username, active_game.id)
+            edit_id = await self._resolve_lobby_message_id(
+                session, active_game, lobby_message_id
+            )
+            lobby = await self._lobby_response(
+                session,
+                active_game,
+                chat_id,
+                bot_username,
+                edit_message_id=edit_id or None,
+                lobby_game_id=str(active_game.id) if not edit_id else None,
+            )
             return [
+                lobby,
                 _result(
                     chat_id,
                     game.constants.ViewName.LEFT_GAME,
                     username=username,
-                )
+                    alert_text="🚪 You left the game",
+                ),
             ]
 
     async def _leave_active_game(

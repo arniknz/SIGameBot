@@ -24,6 +24,7 @@ def _result(
     view: game.constants.ViewName,
     *,
     edit_message_id: int | None = None,
+    is_alert: bool = False,
     **payload: object,
 ) -> game.schemas.ServiceResponse:
     return game.schemas.ServiceResponse(
@@ -31,6 +32,7 @@ def _result(
         view=view,
         payload=dict(payload),
         edit_message_id=edit_message_id,
+        is_alert=is_alert,
     )
 
 
@@ -115,6 +117,7 @@ class ShopService:
                 _result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
+                    is_alert=True,
                     text="⚠️ Unknown category.",
                 )
             ]
@@ -147,6 +150,7 @@ class ShopService:
                 _result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
+                    is_alert=True,
                     text="⚠️ Invalid item.",
                 )
             ]
@@ -157,6 +161,7 @@ class ShopService:
                 _result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
+                    is_alert=True,
                     text="⚠️ Item not found.",
                 )
             ]
@@ -339,7 +344,7 @@ class ShopService:
                 _result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
-                    edit_message_id=edit_id,
+                    is_alert=True,
                     text="⚠️ Invalid item.",
                 )
             ]
@@ -350,7 +355,7 @@ class ShopService:
                 _result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
-                    edit_message_id=edit_id,
+                    is_alert=True,
                     text="⚠️ Item not found.",
                 )
             ]
@@ -370,7 +375,7 @@ class ShopService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        edit_message_id=edit_id,
+                        is_alert=True,
                         text="⚠️ You don't have this item.",
                     )
                 ]
@@ -381,7 +386,7 @@ class ShopService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        edit_message_id=edit_id,
+                        is_alert=True,
                         text="⚠️ No active game where you hold the buzzer.",
                     )
                 ]

@@ -33,6 +33,9 @@ def _register_commands(
         if args == "shop" and shop is not None:
             result = await shop.handle_shop_main(chat_id, telegram_id)
             return bot.views.render_many(result)
+        if args == "rules":
+            result = await content.handle_rules(chat_id)
+            return bot.views.render_many(result)
         result = await content.handle_help(chat_id)
         return bot.views.render_many(result)
 
