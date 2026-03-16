@@ -115,6 +115,7 @@ class Callback(enum.StrEnum):
     SPECTATE = "spectate"
     LEAVE = "leave"
     STOP = "stop"
+    START_GAME = "start_game"
     BUZZER = "buzzer"
     CAT_IN_BAG = "cat_in_bag"
     ALL_IN = "all_in"
@@ -209,3 +210,4 @@ class ViewName(enum.StrEnum):
     CAT_REVEALED = "cat_revealed"
     ALL_IN_ACTIVATED = "all_in_activated"
     GAME_ENDED_AFK = "game_ended_afk"
+    LOBBY = "lobby"

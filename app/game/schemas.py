@@ -12,6 +12,8 @@ class GameResponse:
     text: str
     keyboard: list[list[dict[str, str]]] | None = None
     edit_message_id: int | None = None
+    is_alert: bool = False
+    lobby_game_id: str | None = None
 
 
 @dataclasses.dataclass
@@ -20,6 +22,8 @@ class ServiceResponse:
     view: ViewName
     payload: dict[str, typing.Any] = dataclasses.field(default_factory=dict)
     edit_message_id: int | None = None
+    is_alert: bool = False
+    lobby_game_id: str | None = None
 
 
 @dataclasses.dataclass

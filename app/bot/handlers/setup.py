@@ -18,7 +18,7 @@ def create_router(
     shop: game.services.ShopService,
 ) -> bot.router.Router:
     router = bot.router.Router()
-    bot.handlers.lobby.register(router, lobby)
+    bot.handlers.lobby.register(router, lobby, gameplay)
     bot.handlers.game.register(router, gameplay)
     bot.handlers.content.register(router, content, dialog, shop)
     bot.handlers.common.register(router, content)

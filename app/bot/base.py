@@ -67,6 +67,7 @@ class Bot:
             dialog_manager=self._dialog,
             content_service=self._content,
             gameplay_service=self._gameplay,
+            lobby_service=self._lobby,
         )
         self._poller = bot.poller.Poller(self._tg, self._rabbitmq)
 

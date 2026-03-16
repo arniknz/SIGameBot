@@ -186,12 +186,16 @@ class TgClient:
         self,
         callback_query_id: str,
         text: str | None = None,
+        *,
+        show_alert: bool = False,
     ) -> dict[str, typing.Any]:
-        payload: dict[str, str] = {
+        payload: dict[str, typing.Any] = {
             "callback_query_id": callback_query_id,
         }
         if text is not None:
             payload["text"] = text
+        if show_alert:
+            payload["show_alert"] = True
         return await self._post("answerCallbackQuery", payload)
 
     async def close(self) -> None:

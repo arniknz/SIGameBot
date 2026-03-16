@@ -21,12 +21,17 @@ logger = logging.getLogger(__name__)
 
 
 def _result(
-    chat_id: int, view: game.constants.ViewName, **payload: object
+    chat_id: int,
+    view: game.constants.ViewName,
+    *,
+    is_alert: bool = False,
+    **payload: object,
 ) -> game.schemas.ServiceResponse:
     return game.schemas.ServiceResponse(
         chat_id=chat_id,
         view=view,
         payload=dict(payload),
+        is_alert=is_alert,
     )
 
 
@@ -293,6 +298,7 @@ class GameplayService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
+                        is_alert=True,
                         text="🎲 No questions left in the bag!",
                     )
                 ]
@@ -395,6 +401,7 @@ class GameplayService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
+                        is_alert=True,
                         text=validation,
                     )
                 ]
