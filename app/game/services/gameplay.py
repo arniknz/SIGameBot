@@ -114,7 +114,7 @@ class GameplayService:
                 _result(
                     chat_id,
                     game.constants.ViewName.BOARD,
-                    intro="🎯 Game started! Let's go!",
+                    intro="🎯 Игра началась! Поехали!",
                     current_player=first_player_name,
                     rows=pending_board,
                     selection_timeout=(self._question_selection_timeout),
@@ -299,7 +299,7 @@ class GameplayService:
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         is_alert=True,
-                        text="🎲 No questions left in the bag!",
+                        text="🎲 В мешке больше нет вопросов!",
                     )
                 ]
 
@@ -462,7 +462,7 @@ class GameplayService:
                 if ab_participant and ab_participant.is_active:
                     user_repo = db.repositories.user.UserRepository(session)
                     ab_user = await user_repo.get_by_id(ab_participant.user_id)
-                    ab_name = ab_user.username if ab_user else "Unknown"
+                    ab_name = ab_user.username if ab_user else "Неизвестный"
 
                     game_state.buzzer_pressed_by = ab_participant.id
                     game_state.buzzer_pressed_at = now
@@ -506,23 +506,23 @@ class GameplayService:
         try:
             question_in_game_id = uuid.UUID(question_in_game_id_str)
         except ValueError:
-            return "Invalid question selection."
+            return "Неверный выбор вопроса."
 
         detail = await question_repo.get_question_in_game_detail(
             question_in_game_id
         )
         if detail is None:
-            return "Question not found."
+            return "Вопрос не найден."
 
         question_in_game = detail[0]
         if question_in_game.game_id != active_game.id:
-            return "This question doesn't belong to your game."
+            return "Этот вопрос не из вашей игры."
 
         if (
             question_in_game.status
             != game.constants.QuestionInGameStatus.PENDING
         ):
-            return "This question has already been played."
+            return "Этот вопрос уже был разыгран."
 
         return detail
 
@@ -594,7 +594,7 @@ class GameplayService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="No players yet.",
+                        text="Пока нет игроков.",
                     )
                 ]
 
@@ -602,7 +602,7 @@ class GameplayService:
                 _result(
                     chat_id,
                     game.constants.ViewName.SCOREBOARD,
-                    title="📊 Current scores:\n",
+                    title="📊 Текущий счёт:\n",
                     scores=scoreboard_data,
                     with_controls=True,
                 )
@@ -692,7 +692,7 @@ class GameplayService:
                 _result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
-                    text="Question data not found.",
+                    text="Данные вопроса не найдены.",
                 )
             ]
         detail = await question_repo.get_question_in_game_detail(
@@ -703,7 +703,7 @@ class GameplayService:
                 _result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
-                    text="Question data not found.",
+                    text="Данные вопроса не найдены.",
                 )
             ]
 
@@ -794,7 +794,7 @@ class GameplayService:
                 victim_user = await db.repositories.user.UserRepository(
                     session
                 ).get_by_id(victim.user_id)
-                victim_name = victim_user.username if victim_user else "someone"
+                victim_name = victim_user.username if victim_user else "кого-то"
                 responses.append(
                     _result(
                         chat_id,
@@ -803,7 +803,7 @@ class GameplayService:
                         cost=effective_cost,
                         correct_answer=(
                             f"{correct_answer}\n"
-                            f"🪞 Penalty transferred to {victim_name}!"
+                            f"🪞 Штраф переведён на {victim_name}!"
                         ),
                     ),
                 )
@@ -962,9 +962,9 @@ class GameplayService:
         logger.info("Game %s finished (stopped=%s)", active_game.id, stopped)
 
         title = (
-            "⛔ Game stopped by host.\n\n🏆 Final scores:"
+            "⛔ Игру остановил ведущий.\n\n🏆 Итоговый счёт:"
             if stopped
-            else "🏁 Game over!\n\n🏆 Final scores:"
+            else "🏁 Игра окончена!\n\n🏆 Итоговый счёт:"
         )
         return [
             _result(

@@ -204,7 +204,7 @@ class LobbyService:
                 existing.is_active = True
                 existing.role = game.constants.ParticipantRole.PLAYER
                 existing.score = 0
-                alert_text = f"🔄 Welcome back, {username}!"
+                alert_text = f"🔄 С возвращением, {username}!"
                 logger.info(
                     "%s rejoined game %s (score reset)",
                     username,
@@ -216,7 +216,7 @@ class LobbyService:
                     user.id,
                     game.constants.ParticipantRole.PLAYER,
                 )
-                alert_text = "✅ You joined as player!"
+                alert_text = "✅ Вы вошли в игру как игрок!"
                 logger.info("%s joined game %s", username, active_game.id)
 
             edit_id = await self._resolve_lobby_message_id(
@@ -310,7 +310,7 @@ class LobbyService:
                     chat_id,
                     game.constants.ViewName.NOW_SPECTATING,
                     username=username,
-                    alert_text="👀 You are now spectating",
+                    alert_text="👀 Вы теперь зритель",
                 ),
             ]
 
@@ -379,7 +379,7 @@ class LobbyService:
                     active_game.host_id = new_host.user_id
                     new_host_user = await user_repo.get_by_id(new_host.user_id)
                     new_host_name = (
-                        new_host_user.username if new_host_user else "Unknown"
+                        new_host_user.username if new_host_user else "Неизвестный"
                     )
                     logger.info(
                         "Host transferred to %s in game %s",
@@ -405,8 +405,8 @@ class LobbyService:
                             game.constants.ViewName.GAME_ENDED_NO_PLAYERS,
                             edit_message_id=edit_id or None,
                             alert_text=(
-                                "\U0001f6aa Game ended \u2014 "
-                                "no players remaining"
+                                "\U0001f6aa Игра завершена \u2014 "
+                                "игроков не осталось"
                             ),
                         )
                     ]
@@ -428,7 +428,7 @@ class LobbyService:
                     chat_id,
                     game.constants.ViewName.LEFT_GAME,
                     username=username,
-                    alert_text="🚪 You left the game",
+                    alert_text="🚪 Вы вышли из игры",
                 ),
             ]
 
@@ -493,7 +493,7 @@ class LobbyService:
             active_game.host_id = new_host.user_id
             new_host_user = await user_repo.get_by_id(new_host.user_id)
             new_host_name = (
-                new_host_user.username if new_host_user else "Unknown"
+                new_host_user.username if new_host_user else "Неизвестный"
             )
             responses.append(
                 _result(
@@ -547,7 +547,7 @@ class LobbyService:
             _result(
                 chat_id,
                 game.constants.ViewName.BOARD,
-                intro=f"🔄 {username} left mid-turn.",
+                intro=f"🔄 {username} вышел(а) во время хода.",
                 current_player=next_name,
                 rows=pending_board,
             )

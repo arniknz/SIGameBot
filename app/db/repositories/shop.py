@@ -204,7 +204,7 @@ class ShopRepository:
                     game.models.UserModel.id == user_id,
                 )
             )
-            username = user.scalar_one_or_none() or "Unknown"
+            username = user.scalar_one_or_none() or "Неизвестный"
             results.append((username, score))
         return results
 
