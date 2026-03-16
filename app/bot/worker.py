@@ -64,8 +64,7 @@ class Worker:
         self, update: clients.schemas.Update
     ) -> None:
         is_group = (
-            update.message is not None
-            and update.message.chat.type != "private"
+            update.message is not None and update.message.chat.type != "private"
         ) or update.callback_query is not None
 
         if not is_group:
@@ -75,9 +74,7 @@ class Worker:
             try:
                 await self._rabbitmq.publish_timer_check(delay_ms=delay_ms)
             except Exception:
-                logger.debug(
-                    "Failed to schedule timer check", exc_info=True
-                )
+                logger.debug("Failed to schedule timer check", exc_info=True)
 
     async def start(self) -> None:
         self._running = True

@@ -69,9 +69,7 @@ class Config:
             ),
             buzzer_timeout=int(os.getenv("BUZZER_TIMEOUT", "10")),
             answer_timeout=int(os.getenv("ANSWER_TIMEOUT", "15")),
-            max_failed_selections=int(
-                os.getenv("MAX_FAILED_SELECTIONS", "3")
-            ),
+            max_failed_selections=int(os.getenv("MAX_FAILED_SELECTIONS", "3")),
             rabbitmq_host=os.getenv("RABBITMQ_HOST", "localhost"),
             rabbitmq_port=int(os.getenv("RABBITMQ_PORT", "5672")),
             rabbitmq_user=os.getenv("RABBITMQ_USER", "guest"),

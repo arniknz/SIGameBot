@@ -31,15 +31,11 @@ def register(
 ) -> None:
 
     @router.command(game.constants.Command.HELP)
-    async def cmd_help_group(
-        chat_id: int, bot_username: str = "", **_
-    ):
+    async def cmd_help_group(chat_id: int, bot_username: str = "", **_):
         return _dm_redirect(chat_id, "\u2753 Справка", bot_username, "help")
 
     @router.command(game.constants.Command.RULES)
-    async def cmd_rules_group(
-        chat_id: int, bot_username: str = "", **_
-    ):
+    async def cmd_rules_group(chat_id: int, bot_username: str = "", **_):
         return _dm_redirect(
             chat_id, "\U0001f4d6 Правила", bot_username, "rules"
         )
