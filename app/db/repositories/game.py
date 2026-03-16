@@ -243,7 +243,7 @@ class GameRepository:
             .order_by(game.models.ParticipantModel.score.desc())
         )
         rows = (await self._session.execute(statement)).all()
-        return [(username or "Unknown", score) for username, score in rows]
+        return [(username or "Неизвестный", score) for username, score in rows]
 
     async def set_lobby_message_id(
         self,
@@ -262,7 +262,7 @@ class GameRepository:
         active_game: game.models.GameModel,
     ) -> str:
         if not active_game.current_player_id:
-            return "Unknown"
+            return "Неизвестный"
         statement = (
             sqlalchemy.select(game.models.UserModel.username)
             .join(
@@ -277,4 +277,4 @@ class GameRepository:
             )
         )
         row = (await self._session.execute(statement)).one_or_none()
-        return row[0] if row else "Unknown"
+        return row[0] if row else "Неизвестный"

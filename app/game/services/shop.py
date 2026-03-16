@@ -118,7 +118,7 @@ class ShopService:
                     chat_id,
                     game.constants.ViewName.PLAIN,
                     is_alert=True,
-                    text="⚠️ Unknown category.",
+                    text="⚠️ Неизвестная категория.",
                 )
             ]
 
@@ -151,7 +151,7 @@ class ShopService:
                     chat_id,
                     game.constants.ViewName.PLAIN,
                     is_alert=True,
-                    text="⚠️ Invalid item.",
+                    text="⚠️ Неверный предмет.",
                 )
             ]
 
@@ -162,7 +162,7 @@ class ShopService:
                     chat_id,
                     game.constants.ViewName.PLAIN,
                     is_alert=True,
-                    text="⚠️ Item not found.",
+                    text="⚠️ Предмет не найден.",
                 )
             ]
 
@@ -345,7 +345,7 @@ class ShopService:
                     chat_id,
                     game.constants.ViewName.PLAIN,
                     is_alert=True,
-                    text="⚠️ Invalid item.",
+                    text="⚠️ Неверный предмет.",
                 )
             ]
 
@@ -356,7 +356,7 @@ class ShopService:
                     chat_id,
                     game.constants.ViewName.PLAIN,
                     is_alert=True,
-                    text="⚠️ Item not found.",
+                    text="⚠️ Предмет не найден.",
                 )
             ]
 
@@ -376,7 +376,7 @@ class ShopService:
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         is_alert=True,
-                        text="⚠️ You don't have this item.",
+                        text="⚠️ У вас нет этого предмета.",
                     )
                 ]
 
@@ -387,7 +387,7 @@ class ShopService:
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         is_alert=True,
-                        text="⚠️ No active game where you hold the buzzer.",
+                        text="⚠️ Нет активной игры, где вы нажали звонок.",
                     )
                 ]
 
@@ -539,8 +539,8 @@ class ShopService:
                             telegram_id,
                             game.constants.ViewName.ITEM_USED,
                             text=(
-                                f"{item_def.emoji} Hint: «{hint}»\n"
-                                f"⏱ {remaining_seconds}s remaining"
+                                f"{item_def.emoji} Подсказка: «{hint}»\n"
+                                f"⏱ Осталось {remaining_seconds} сек"
                             ),
                         ),
                     ]
@@ -569,8 +569,8 @@ class ShopService:
                             telegram_id,
                             game.constants.ViewName.ITEM_USED,
                             text=(
-                                f"{item_def.emoji} Answer: «{answer}»\n"
-                                f"⏱ {remaining_seconds}s remaining"
+                                f"{item_def.emoji} Ответ: «{answer}»\n"
+                                f"⏱ Осталось {remaining_seconds} сек"
                             ),
                         ),
                     ]
@@ -579,7 +579,7 @@ class ShopService:
             participant.score += game.shop_items.BONUS_START_POINTS
             effect_text = (
                 f"{item_def.emoji} +{game.shop_items.BONUS_START_POINTS} "
-                f"points!"
+                f"очков!"
             )
 
         elif effect == game.constants.ItemEffect.STEAL_POINTS:
@@ -595,15 +595,15 @@ class ShopService:
                 victim_user = await db.repositories.user.UserRepository(
                     session
                 ).get_by_id(victim.user_id)
-                victim_name = victim_user.username if victim_user else "someone"
+                victim_name = victim_user.username if victim_user else "кого-то"
                 effect_text = (
-                    f"{item_def.emoji} Stole "
-                    f"{game.shop_items.STEAL_AMOUNT} points "
-                    f"from {victim_name}!"
+                    f"{item_def.emoji} Украдено "
+                    f"{game.shop_items.STEAL_AMOUNT} очков "
+                    f"у {victim_name}!"
                 )
 
         elif effect == game.constants.ItemEffect.HIDE_SCORE:
-            effect_text = f"{item_def.emoji} Your score is now hidden!"
+            effect_text = f"{item_def.emoji} Ваш счёт теперь скрыт!"
 
         elif effect == game.constants.ItemEffect.REPLACE_QUESTION:
             if game_state.current_question_id:

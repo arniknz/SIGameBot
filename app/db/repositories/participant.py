@@ -80,7 +80,7 @@ class ParticipantRepository:
             )
         )
         rows = (await self._session.execute(statement)).all()
-        return [username or "Unknown" for (username,) in rows]
+        return [username or "Неизвестный" for (username,) in rows]
 
     async def pick_random(
         self,
@@ -166,7 +166,7 @@ class ParticipantRepository:
         rows = (await self._session.execute(statement)).all()
         return [
             (
-                username or "Unknown",
+                username or "Неизвестный",
                 role,
                 host_user_id is not None and user_id == host_user_id,
             )

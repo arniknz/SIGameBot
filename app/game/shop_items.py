@@ -24,8 +24,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
     ShopItemDef(
         1,
         "🗡️",
-        "Double Blade",
-        "x2 points for correct answer",
+        "Двойной клинок",
+        "x2 очка за верный ответ",
         500,
         ShopCategory.WEAPONS,
         ItemEffect.DOUBLE_POINTS,
@@ -33,8 +33,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
     ShopItemDef(
         2,
         "🛡️",
-        "Shield",
-        "No penalty for wrong answer",
+        "Щит",
+        "Нет штрафа за неверный ответ",
         400,
         ShopCategory.WEAPONS,
         ItemEffect.NO_PENALTY,
@@ -42,8 +42,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
     ShopItemDef(
         3,
         "🏹",
-        "Time Arrow",
-        f"+{EXTRA_TIME_SECONDS} seconds to answer",
+        "Стрела времени",
+        f"+{EXTRA_TIME_SECONDS} сек на ответ",
         300,
         ShopCategory.WEAPONS,
         ItemEffect.EXTRA_TIME,
@@ -51,8 +51,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
     ShopItemDef(
         4,
         "🔮",
-        "Crystal Ball",
-        "Reveals a hint about the answer",
+        "Хрустальный шар",
+        "Показывает подсказку к ответу",
         200,
         ShopCategory.WEAPONS,
         ItemEffect.REVEAL_HINT,
@@ -60,8 +60,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
     ShopItemDef(
         5,
         "📖",
-        "Ancient Scroll",
-        "Shows the correct answer",
+        "Древний свиток",
+        "Показывает правильный ответ",
         600,
         ShopCategory.SCROLLS,
         ItemEffect.REVEAL_ANSWER,
@@ -69,8 +69,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
     ShopItemDef(
         6,
         "⚡",
-        "Lightning",
-        "Auto-buzz the next question",
+        "Молния",
+        "Автоматически нажимает звонок на следующий вопрос",
         800,
         ShopCategory.SCROLLS,
         ItemEffect.AUTO_BUZZER,
@@ -78,8 +78,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
     ShopItemDef(
         7,
         "💀",
-        "Death Pass",
-        "Wrong answer returns question to board",
+        "Пасс смерти",
+        "При неверном ответе вопрос возвращается на табло",
         700,
         ShopCategory.SCROLLS,
         ItemEffect.PASS_ON_WRONG,
@@ -87,8 +87,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
     ShopItemDef(
         8,
         "💎",
-        "Diamond",
-        "Treats any answer as correct",
+        "Алмаз",
+        "Любой ответ засчитывается как верный",
         1000,
         ShopCategory.SCROLLS,
         ItemEffect.FORCE_CORRECT,
@@ -96,8 +96,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
     ShopItemDef(
         9,
         "🃏",
-        "Joker",
-        "Replaces current question with another",
+        "Джокер",
+        "Заменяет текущий вопрос на другой",
         600,
         ShopCategory.ILLUSIONS,
         ItemEffect.REPLACE_QUESTION,
@@ -105,8 +105,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
     ShopItemDef(
         10,
         "🪞",
-        "Mirror",
-        "Penalty transfers to a random opponent",
+        "Зеркало",
+        "Штраф переводится на случайного соперника",
         800,
         ShopCategory.ILLUSIONS,
         ItemEffect.TRANSFER_PENALTY,
@@ -114,8 +114,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
     ShopItemDef(
         11,
         "⏳",
-        "Hourglass",
-        "Resurrects a random answered question",
+        "Песочные часы",
+        "Возвращает случайный отыгранный вопрос на табло",
         1000,
         ShopCategory.ILLUSIONS,
         ItemEffect.RESURRECT_QUESTION,
@@ -123,8 +123,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
     ShopItemDef(
         12,
         "📦",
-        "Pandora's Box",
-        "Opens a random new question immediately",
+        "Ящик Пандоры",
+        "Сразу открывает случайный новый вопрос",
         1200,
         ShopCategory.ILLUSIONS,
         ItemEffect.OPEN_ANY,
@@ -132,8 +132,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
     ShopItemDef(
         13,
         "👑",
-        "Crown",
-        f"+{BONUS_START_POINTS} points immediately",
+        "Корона",
+        f"+{BONUS_START_POINTS} очков сразу",
         800,
         ShopCategory.TITLES,
         ItemEffect.BONUS_POINTS,
@@ -141,8 +141,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
     ShopItemDef(
         14,
         "🧥",
-        "Cloak",
-        "Hides your score from the board",
+        "Плащ",
+        "Скрывает ваш счёт на табло",
         600,
         ShopCategory.TITLES,
         ItemEffect.HIDE_SCORE,
@@ -150,8 +150,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
     ShopItemDef(
         15,
         "🧌",
-        "Troll",
-        f"Steals {STEAL_AMOUNT} points from an opponent",
+        "Тролль",
+        f"Крадёт {STEAL_AMOUNT} очков у соперника",
         900,
         ShopCategory.TITLES,
         ItemEffect.STEAL_POINTS,
@@ -159,8 +159,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
     ShopItemDef(
         16,
         "💍",
-        "Ring of Power",
-        "You choose the next question",
+        "Кольцо власти",
+        "Вы выбираете следующий вопрос",
         1200,
         ShopCategory.TITLES,
         ItemEffect.BECOME_CHOOSER,
@@ -174,8 +174,8 @@ for _item in SHOP_ITEMS:
     ITEMS_BY_CATEGORY.setdefault(_item.category, []).append(_item)
 
 CATEGORY_LABELS: dict[ShopCategory, str] = {
-    ShopCategory.WEAPONS: "⚔️ Weapons",
-    ShopCategory.SCROLLS: "📜 Scrolls",
-    ShopCategory.ILLUSIONS: "🌀 Illusions",
-    ShopCategory.TITLES: "🏅 Titles",
+    ShopCategory.WEAPONS: "⚔️ Оружие",
+    ShopCategory.SCROLLS: "📜 Свитки",
+    ShopCategory.ILLUSIONS: "🌀 Иллюзии",
+    ShopCategory.TITLES: "🏅 Титулы",
 }
