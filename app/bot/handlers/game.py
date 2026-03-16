@@ -22,6 +22,11 @@ def register(
         result = await gameplay.handle_score(chat_id)
         return bot.views.render_many(result)
 
+    @router.callback(game.constants.Callback.SCORE)
+    async def cb_score(chat_id: int, **_):
+        result = await gameplay.handle_score(chat_id)
+        return bot.views.render_many(result)
+
     @router.callback(game.constants.Callback.BUZZER)
     async def cb_buzzer(chat_id: int, telegram_id: int, username: str, **_):
         result = await gameplay.handle_buzzer(chat_id, telegram_id, username)

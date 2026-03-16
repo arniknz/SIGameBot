@@ -116,6 +116,7 @@ class Callback(enum.StrEnum):
     LEAVE = "leave"
     STOP = "stop"
     START_GAME = "start_game"
+    SCORE = "score"
     BUZZER = "buzzer"
     CAT_IN_BAG = "cat_in_bag"
     ALL_IN = "all_in"

@@ -34,8 +34,6 @@ def _make(
 def _render_game_created(cid: int, p: _P) -> game.schemas.GameResponse:
     bot_username = p.get("bot_username", "")
     kb = bot.keyboards.lobby(bot_username)
-    if bot_username:
-        kb.append(bot.keyboards.dm_bot_button(bot_username))
     return _make(
         cid,
         (
@@ -81,8 +79,6 @@ def _render_lobby(cid: int, p: _P) -> game.schemas.GameResponse:
         lines.append("\n🕹 Можно начинать! Ведущий нажимает «Начать игру».")
 
     kb = bot.keyboards.lobby(bot_username)
-    if bot_username:
-        kb.append(bot.keyboards.dm_bot_button(bot_username))
     return _make(cid, "\n".join(lines), keyboard=kb)
 
 
