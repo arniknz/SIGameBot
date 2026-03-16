@@ -197,11 +197,6 @@ async def bulk_import_csv(
     ],
     _admin: typing.Annotated[str, fastapi.Depends(dependencies.require_admin)],
 ) -> schemas.BulkImportResult:
-    """Import questions from CSV.
-
-    Expected columns: topic, question, answer, cost
-    Topics are created automatically if they don't exist.
-    """
     content = (await file.read()).decode("utf-8-sig")
     reader = csv.DictReader(io.StringIO(content))
 

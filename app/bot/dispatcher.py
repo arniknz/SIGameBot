@@ -24,12 +24,14 @@ class Dispatcher:
         dialog_manager: bot.dialog.DialogManager,
         content_service: game.services.ContentService,
         gameplay_service: game.services.GameplayService,
+        lobby_service: game.services.LobbyService | None = None,
     ) -> None:
         self._tg = tg
         self._router = router
         self._dialog = dialog_manager
         self._content = content_service
         self._gameplay = gameplay_service
+        self._lobby = lobby_service
 
     async def handle_update(self, update: clients.schemas.Update) -> None:
         try:
@@ -94,7 +96,8 @@ class Dispatcher:
             )
             if not responses:
                 responses = self._chat_type_error(cmd, is_private, chat_id)
-            await self._send_responses(responses)
+            results = await self._send_responses(responses)
+            await self._capture_lobby_message_ids(responses, results)
             return
 
         if not is_private:
@@ -114,14 +117,14 @@ class Dispatcher:
             return []
         if is_private:
             sr = game.schemas.ServiceResponse(
-                chat_id=chat_id,
-                view=game.constants.ViewName.GROUP_ONLY_COMMAND,
+                chat_id,
+                game.constants.ViewName.GROUP_ONLY_COMMAND,
             )
         else:
             sr = game.schemas.ServiceResponse(
-                chat_id=chat_id,
-                view=game.constants.ViewName.PRIVATE_ONLY_COMMAND,
-                payload={"bot_username": self._tg.bot_username},
+                chat_id,
+                game.constants.ViewName.PRIVATE_ONLY_COMMAND,
+                {"bot_username": self._tg.bot_username},
             )
         return [bot.views.render(sr)]
 
@@ -136,10 +139,6 @@ class Dispatcher:
         cb = update.callback_query
         if not cb:
             return
-        try:
-            await self._tg.answer_callback(cb.id)
-        except Exception:
-            logger.debug("answerCallbackQuery failed (stale query), proceeding")
 
         data = cb.data or ""
         chat_id = cb.message.chat.id if cb.message else 0
@@ -157,7 +156,28 @@ class Dispatcher:
             bot_username=self._tg.bot_username,
             message_id=message_id,
         )
-        await self._send_responses(responses)
+
+        alert_text: str | None = None
+        chat_responses: list[game.schemas.GameResponse] = []
+        for resp in responses:
+            if resp.is_alert:
+                if alert_text is None:
+                    alert_text = resp.text
+            else:
+                chat_responses.append(resp)
+
+        try:
+            await self._tg.answer_callback(
+                cb.id,
+                text=alert_text,
+                show_alert=alert_text is not None,
+            )
+        except Exception:
+            logger.debug("answerCallbackQuery failed (stale query), proceeding")
+
+        if chat_responses:
+            results = await self._send_responses(chat_responses)
+            await self._capture_lobby_message_ids(chat_responses, results)
 
     async def _handle_dialog_input(
         self,
@@ -175,8 +195,8 @@ class Dispatcher:
                 return bot.views.render_many(
                     [
                         game.schemas.ServiceResponse(
-                            chat_id=chat_id,
-                            view=game.constants.ViewName.DIALOG_CANCELLED,
+                            chat_id,
+                            game.constants.ViewName.DIALOG_CANCELLED,
                         )
                     ]
                 )
@@ -210,8 +230,8 @@ class Dispatcher:
             return bot.views.render_many(
                 [
                     game.schemas.ServiceResponse(
-                        chat_id=chat_id,
-                        view=game.constants.ViewName.DIALOG_PROMPT_ANSWER,
+                        chat_id,
+                        game.constants.ViewName.DIALOG_PROMPT_ANSWER,
                     )
                 ]
             )
@@ -225,8 +245,8 @@ class Dispatcher:
             return bot.views.render_many(
                 [
                     game.schemas.ServiceResponse(
-                        chat_id=chat_id,
-                        view=game.constants.ViewName.DIALOG_PROMPT_COST,
+                        chat_id,
+                        game.constants.ViewName.DIALOG_PROMPT_COST,
                     )
                 ]
             )
@@ -288,7 +308,7 @@ class Dispatcher:
 
     async def _send_responses(
         self, responses: list[game.schemas.GameResponse]
-    ) -> None:
+    ) -> list[object]:
         tasks = []
         for resp in responses:
             if resp.edit_message_id:
@@ -309,7 +329,7 @@ class Dispatcher:
             else:
                 tasks.append(self._tg.send_message(resp.chat_id, resp.text))
         if not tasks:
-            return
+            return []
         results = await asyncio.gather(*tasks, return_exceptions=True)
         for idx, result in enumerate(results):
             if isinstance(result, Exception):
@@ -326,3 +346,29 @@ class Dispatcher:
                         result,
                         exc_info=result,
                     )
+        return list(results)
+
+    async def _capture_lobby_message_ids(
+        self,
+        responses: list[game.schemas.GameResponse],
+        results: list[object],
+    ) -> None:
+        if not self._lobby:
+            return
+        for resp, result in zip(responses, results):
+            if (
+                resp.lobby_game_id
+                and isinstance(result, dict)
+                and not resp.edit_message_id
+            ):
+                msg_id = result.get("message_id")
+                if msg_id:
+                    try:
+                        await self._lobby.store_lobby_message_id(
+                            resp.lobby_game_id, msg_id
+                        )
+                    except Exception:
+                        logger.warning(
+                            "Failed to store lobby message_id for game %s",
+                            resp.lobby_game_id,
+                        )

@@ -245,6 +245,18 @@ class GameRepository:
         rows = (await self._session.execute(statement)).all()
         return [(username or "Unknown", score) for username, score in rows]
 
+    async def set_lobby_message_id(
+        self,
+        game_id: uuid.UUID,
+        message_id: int,
+    ) -> None:
+        statement = (
+            sqlalchemy.update(game.models.GameStateModel)
+            .where(game.models.GameStateModel.game_id == game_id)
+            .values(lobby_message_id=message_id)
+        )
+        await self._session.execute(statement)
+
     async def current_player_username(
         self,
         active_game: game.models.GameModel,
