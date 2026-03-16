@@ -108,6 +108,28 @@ def buzzer_with_inventory() -> list[list[dict[str, str]]]:
     ]
 
 
+def answer_prompt(show_all_in: bool = False) -> list[list[dict[str, str]]]:
+    kb: list[list[dict[str, str]]] = []
+    if show_all_in:
+        kb.append(
+            [
+                {
+                    "text": "⚡ ALL-IN",
+                    "callback_data": game.constants.Callback.ALL_IN,
+                }
+            ]
+        )
+    kb.append(
+        [
+            {
+                "text": "📦 Инвентарь",
+                "callback_data": game.constants.Callback.INVENTORY,
+            }
+        ]
+    )
+    return kb
+
+
 def all_in() -> list[list[dict[str, str]]]:
     return [
         [
@@ -464,4 +486,12 @@ def inventory_items(
                 }
             ]
         )
+    kb.append(
+        [
+            {
+                "text": "◀️ Назад",
+                "callback_data": game.constants.Callback.INV_BACK,
+            }
+        ]
+    )
     return kb

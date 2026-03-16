@@ -639,9 +639,9 @@ class LobbyService:
         )
 
         title = (
-            "⛔ Game stopped by host.\n\n🏆 Final scores:"
+            "⛔ Игра остановлена хостом.\n\n🏆 Итоговый счёт:"
             if stopped
-            else "🏁 Game over!\n\n🏆 Final scores:"
+            else "🏁 Игра окончена!\n\n🏆 Итоговый счёт:"
         )
         return [
             _result(

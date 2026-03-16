@@ -357,9 +357,9 @@ class TimerService:
         )
 
         title = (
-            "⛔ Game stopped by host.\n\n🏆 Final scores:"
+            "⛔ Игра остановлена хостом.\n\n🏆 Итоговый счёт:"
             if stopped
-            else "🏁 Game over!\n\n🏆 Final scores:"
+            else "🏁 Игра окончена!\n\n🏆 Итоговый счёт:"
         )
         return [
             _result(
@@ -433,7 +433,7 @@ class TimerService:
                     _result(
                         chat_id,
                         game.constants.ViewName.BOARD,
-                        intro="🔄 Game recovered! Let's continue.",
+                        intro="🔄 Игра восстановлена! Продолжаем.",
                         current_player=current_player_name,
                         rows=pending_board,
                     )

@@ -11,32 +11,35 @@ import sqlalchemy.ext.asyncio
 
 _security = fastapi.security.HTTPBasic()
 
-_cfg: config.Config | None = None
-_db: db.database.Database | None = None
+
+class _AppState:
+    cfg: config.Config | None = None
+    db: db.database.Database | None = None
+
+
+_state = _AppState()
 
 
 def init_auth(cfg: config.Config) -> None:
-    global _cfg
-    _cfg = cfg
+    _state.cfg = cfg
 
 
 async def init_db(cfg: config.Config) -> None:
-    global _db
-    _db = db.database.Database(cfg)
-    await _db.connect()
+    _state.db = db.database.Database(cfg)
+    await _state.db.connect()
 
 
 async def close_db() -> None:
-    if _db is not None:
-        await _db.disconnect()
+    if _state.db is not None:
+        await _state.db.disconnect()
 
 
 async def get_session() -> typing.AsyncIterator[
     sqlalchemy.ext.asyncio.AsyncSession
 ]:
-    if _db is None:
+    if _state.db is None:
         raise RuntimeError("Database not initialized")
-    async with _db.session_factory() as session:
+    async with _state.db.session_factory() as session:
         yield session
 
 
@@ -46,7 +49,7 @@ def require_admin(
         fastapi.Depends(_security),
     ],
 ) -> str:
-    if _cfg is None:
+    if _state.cfg is None:
         raise fastapi.HTTPException(
             status_code=500,
             detail="Server misconfigured",
@@ -54,11 +57,11 @@ def require_admin(
 
     username_ok = secrets.compare_digest(
         credentials.username.encode(),
-        _cfg.admin_username.encode(),
+        _state.cfg.admin_username.encode(),
     )
     password_ok = secrets.compare_digest(
         credentials.password.encode(),
-        _cfg.admin_password.encode(),
+        _state.cfg.admin_password.encode(),
     )
     if not (username_ok and password_ok):
         raise fastapi.HTTPException(
