@@ -45,12 +45,10 @@ def _render_no_notifications(
     return bot.views.render_many(filtered)
 
 
-def register(
+def _register_start(
     router: bot.router.Router,
     lobby: game.services.LobbyService,
-    gameplay: game.services.GameplayService,
 ) -> None:
-
     @router.command(game.constants.Command.START)
     async def cmd_start(
         chat_id: int,
@@ -64,6 +62,11 @@ def register(
         )
         return bot.views.render_many(result)
 
+
+def _register_join(
+    router: bot.router.Router,
+    lobby: game.services.LobbyService,
+) -> None:
     @router.command(game.constants.Command.JOIN)
     async def cmd_join(
         chat_id: int,
@@ -95,6 +98,11 @@ def register(
         )
         return _with_alert(result, chat_id)
 
+
+def _register_spectate(
+    router: bot.router.Router,
+    lobby: game.services.LobbyService,
+) -> None:
     @router.command(game.constants.Command.SPECTATE)
     async def cmd_spectate(
         chat_id: int,
@@ -126,6 +134,11 @@ def register(
         )
         return _with_alert(result, chat_id)
 
+
+def _register_leave(
+    router: bot.router.Router,
+    lobby: game.services.LobbyService,
+) -> None:
     @router.command(game.constants.Command.LEAVE)
     async def cmd_leave(
         chat_id: int,
@@ -157,6 +170,12 @@ def register(
         )
         return _with_alert(result, chat_id)
 
+
+def _register_stop_and_start(
+    router: bot.router.Router,
+    lobby: game.services.LobbyService,
+    gameplay: game.services.GameplayService,
+) -> None:
     @router.command(game.constants.Command.STOP)
     async def cmd_stop(chat_id: int, telegram_id: int, **_):
         result = await lobby.handle_stop(chat_id, telegram_id)
@@ -171,3 +190,15 @@ def register(
     async def cb_start_game(chat_id: int, telegram_id: int, **_):
         result = await gameplay.handle_start_game(chat_id, telegram_id)
         return bot.views.render_many(result)
+
+
+def register(
+    router: bot.router.Router,
+    lobby: game.services.LobbyService,
+    gameplay: game.services.GameplayService,
+) -> None:
+    _register_start(router, lobby)
+    _register_join(router, lobby)
+    _register_spectate(router, lobby)
+    _register_leave(router, lobby)
+    _register_stop_and_start(router, lobby, gameplay)

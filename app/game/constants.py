@@ -125,6 +125,7 @@ class Callback(enum.StrEnum):
     CANCEL = "cancel"
     SHOP = "shop"
     INVENTORY = "inventory"
+    INV_BACK = "inv_back"
 
 
 class CallbackPrefix(enum.StrEnum):
@@ -212,3 +213,4 @@ class ViewName(enum.StrEnum):
     ALL_IN_ACTIVATED = "all_in_activated"
     GAME_ENDED_AFK = "game_ended_afk"
     LOBBY = "lobby"
+    ANSWER_PROMPT = "answer_prompt"

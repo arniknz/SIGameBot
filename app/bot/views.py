@@ -39,7 +39,8 @@ def _render_game_created(cid: int, p: _P) -> game.schemas.GameResponse:
         (
             f"🎲 Игра начинается!\n\n"
             f"🎮 {p['username']} создал(а) новую игру!\n"
-            f"Нажмите «Войти», чтобы играть, или «Смотреть» — чтобы наблюдать.\n\n"
+            "Нажмите «Войти», чтобы играть, или «Смотреть» — "
+            "чтобы наблюдать.\n\n"
             f"🕹 Ожидаем игроков..."
         ),
         keyboard=kb,
@@ -70,8 +71,7 @@ def _render_lobby(cid: int, p: _P) -> game.schemas.GameResponse:
 
     if spectators:
         lines.append(f"\n👀 Зрители ({len(spectators)}):")
-        for name in spectators:
-            lines.append(f"  👀 {name}")
+        lines.extend(f"  👀 {name}" for name in spectators)
 
     if len(players) < 2:
         lines.append("\n⏳ Нужно минимум 2 игрока для старта.")
@@ -185,7 +185,6 @@ def _render_cat_revealed(cid: int, p: _P) -> game.schemas.GameResponse:
 
 
 def _render_buzzer_pressed(cid: int, p: _P) -> game.schemas.GameResponse:
-    kb = bot.keyboards.all_in() if p.get("show_all_in") else None
     return _make(
         cid,
         (
@@ -193,7 +192,9 @@ def _render_buzzer_pressed(cid: int, p: _P) -> game.schemas.GameResponse:
             f"⏱ У вас {p['answer_timeout']} сек на ответ.\n"
             f"Введите ответ!"
         ),
-        keyboard=kb,
+        keyboard=bot.keyboards.answer_prompt(
+            show_all_in=bool(p.get("show_all_in")),
+        ),
     )
 
 
@@ -411,7 +412,8 @@ def _render_rules(cid: int, p: _P) -> game.schemas.GameResponse:
             "из любой темы по неожиданной стоимости!\n\n"
             "⚡ Ва-банк — если очков меньше половины от лидера, "
             "после нажатия звонка можно идти ва-банк: "
-            "верно = удвоение очков, неверно = счёт обнуляется! Раз за игру.\n\n"
+            "верно = удвоение очков, неверно = счёт обнуляется! "
+            "Раз за игру.\n\n"
             "🏆 Побеждает игрок с наибольшим количеством очков!"
         ),
     )
@@ -484,10 +486,10 @@ def _render_shop_category(cid: int, p: _P) -> game.schemas.GameResponse:
     label = game.shop_items.CATEGORY_LABELS.get(category, str(category).title())
 
     lines = [f"{label}\n"]
-    for item in items:
-        lines.append(
-            f"{item.emoji} {item.name} — {item.price}💰\n    {item.description}"
-        )
+    lines.extend(
+        f"{item.emoji} {item.name} — {item.price}💰\n    {item.description}"
+        for item in items
+    )
     lines.append(f"\n💰 Ваш баланс: {balance} очк.")
 
     return _make(
@@ -542,12 +544,21 @@ def _render_inventory_list(cid: int, p: _P) -> game.schemas.GameResponse:
     )
 
 
+def _render_answer_prompt(cid: int, p: _P) -> game.schemas.GameResponse:
+    remaining = p.get("remaining_seconds", 0)
+    return _make(
+        cid,
+        (f"⏱ Осталось {remaining} сек на ответ.\nВведите ответ!"),
+        keyboard=bot.keyboards.answer_prompt(),
+    )
+
+
 def _render_inventory_empty(cid: int, _p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         "📦 Инвентарь пуст! Зайдите в /shop, чтобы купить предметы."
         "\n\nВведите ответ!",
-        keyboard=bot.keyboards.buzzer_with_inventory(),
+        keyboard=bot.keyboards.answer_prompt(),
     )
 
 
@@ -565,7 +576,7 @@ def _render_item_used_group(cid: int, p: _P) -> game.schemas.GameResponse:
     return _make(
         cid,
         text,
-        keyboard=bot.keyboards.buzzer_with_inventory(),
+        keyboard=bot.keyboards.answer_prompt(),
     )
 
 
@@ -728,6 +739,7 @@ _RENDERERS: dict[game.constants.ViewName, Renderer] = {
     game.constants.ViewName.SHOP_CATEGORY: _render_shop_category,
     game.constants.ViewName.SHOP_BUY_OK: _render_shop_buy_ok,
     game.constants.ViewName.SHOP_INSUFFICIENT: _render_shop_insufficient,
+    game.constants.ViewName.ANSWER_PROMPT: _render_answer_prompt,
     game.constants.ViewName.INVENTORY_LIST: _render_inventory_list,
     game.constants.ViewName.INVENTORY_EMPTY: _render_inventory_empty,
     game.constants.ViewName.ITEM_USED: _render_item_used,

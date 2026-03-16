@@ -12,6 +12,7 @@ import clients.tg
 import game.constants
 import game.schemas
 import game.services
+import sqlalchemy.exc
 
 logger = logging.getLogger(__name__)
 
@@ -117,14 +118,14 @@ class Dispatcher:
             return []
         if is_private:
             sr = game.schemas.ServiceResponse(
-                chat_id,
-                game.constants.ViewName.GROUP_ONLY_COMMAND,
+                chat_id=chat_id,
+                view=game.constants.ViewName.GROUP_ONLY_COMMAND,
             )
         else:
             sr = game.schemas.ServiceResponse(
-                chat_id,
-                game.constants.ViewName.PRIVATE_ONLY_COMMAND,
-                {"bot_username": self._tg.bot_username},
+                chat_id=chat_id,
+                view=game.constants.ViewName.PRIVATE_ONLY_COMMAND,
+                payload={"bot_username": self._tg.bot_username},
             )
         return [bot.views.render(sr)]
 
@@ -172,8 +173,11 @@ class Dispatcher:
                 text=alert_text,
                 show_alert=alert_text is not None,
             )
-        except Exception:
-            logger.debug("answerCallbackQuery failed (stale query), proceeding")
+        except (aiohttp.ClientError, OSError) as exc:
+            logger.debug(
+                "answerCallbackQuery failed (stale query), proceeding",
+                exc_info=exc,
+            )
 
         if chat_responses:
             results = await self._send_responses(chat_responses)
@@ -195,8 +199,8 @@ class Dispatcher:
                 return bot.views.render_many(
                     [
                         game.schemas.ServiceResponse(
-                            chat_id,
-                            game.constants.ViewName.DIALOG_CANCELLED,
+                            chat_id=chat_id,
+                            view=game.constants.ViewName.DIALOG_CANCELLED,
                         )
                     ]
                 )
@@ -230,8 +234,8 @@ class Dispatcher:
             return bot.views.render_many(
                 [
                     game.schemas.ServiceResponse(
-                        chat_id,
-                        game.constants.ViewName.DIALOG_PROMPT_ANSWER,
+                        chat_id=chat_id,
+                        view=game.constants.ViewName.DIALOG_PROMPT_ANSWER,
                     )
                 ]
             )
@@ -245,8 +249,8 @@ class Dispatcher:
             return bot.views.render_many(
                 [
                     game.schemas.ServiceResponse(
-                        chat_id,
-                        game.constants.ViewName.DIALOG_PROMPT_COST,
+                        chat_id=chat_id,
+                        view=game.constants.ViewName.DIALOG_PROMPT_COST,
                     )
                 ]
             )
@@ -270,7 +274,10 @@ class Dispatcher:
             return [
                 game.schemas.GameResponse(
                     chat_id=chat_id,
-                    text="⚠️ Название темы не может быть пустым. Попробуйте снова:",
+                    text=(
+                        "⚠️ Название темы не может быть пустым. "
+                        "Попробуйте снова:"
+                    ),
                 )
             ]
         responses = await self._content.handle_add_topic(
@@ -355,7 +362,7 @@ class Dispatcher:
     ) -> None:
         if not self._lobby:
             return
-        for resp, result in zip(responses, results):
+        for resp, result in zip(responses, results, strict=True):
             if (
                 resp.lobby_game_id
                 and isinstance(result, dict)
@@ -367,8 +374,9 @@ class Dispatcher:
                         await self._lobby.store_lobby_message_id(
                             resp.lobby_game_id, msg_id
                         )
-                    except Exception:
+                    except (sqlalchemy.exc.SQLAlchemyError, OSError) as exc:
                         logger.warning(
-                            "Failed to store lobby message_id for game %s",
+                            "Failed to store lobby message_id for game %s: %s",
                             resp.lobby_game_id,
+                            exc,
                         )

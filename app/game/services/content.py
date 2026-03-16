@@ -405,7 +405,8 @@ class ContentService:
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text=(
-                            "🎮 Игр пока нет. Добавьте меня в группу и напишите /start!"
+                            "🎮 Игр пока нет. Добавьте меня в группу "
+                            "и напишите /start!"
                         ),
                     )
                 ]
@@ -544,7 +545,10 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="🚫 Восстанавливать можно только созданные вами темы.",
+                        text=(
+                            "🚫 Восстанавливать можно только "
+                            "созданные вами темы."
+                        ),
                     )
                 ]
 
@@ -650,7 +654,10 @@ class ContentService:
                     _result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
-                        text="🚫 Восстанавливать можно только созданные вами вопросы.",
+                        text=(
+                            "🚫 Восстанавливать можно только "
+                            "созданные вами вопросы."
+                        ),
                     )
                 ]
 

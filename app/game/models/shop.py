@@ -10,7 +10,6 @@ import sqlalchemy.orm
 from game.models.base import Base
 
 if typing.TYPE_CHECKING:
-    from game.models.game import GameModel, ParticipantModel
     from game.models.user import UserModel
 
 

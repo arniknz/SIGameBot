@@ -55,8 +55,8 @@ class Worker:
                     self._processing = False
                     try:
                         await message.ack()
-                    except Exception:
-                        pass
+                    except (OSError, RuntimeError) as exc:
+                        logger.debug("Message ack failed: %s", exc)
 
         logger.info("Worker-%d loop exited", self._id)
 

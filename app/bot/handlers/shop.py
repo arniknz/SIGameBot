@@ -81,6 +81,18 @@ def _register_callbacks(
         result = await shop.handle_buy(chat_id, telegram_id, item_id_str)
         return bot.views.render_many(result)
 
+    @router.callback(game.constants.Callback.INV_BACK)
+    async def cb_inv_back(
+        chat_id: int,
+        telegram_id: int,
+        message_id: int = 0,
+        **_,
+    ):
+        result = await shop.handle_inventory_back(
+            chat_id, telegram_id, message_id=message_id
+        )
+        return bot.views.render_many(result)
+
     @router.callback_pattern(rf"^{game.constants.CallbackPrefix.INV_USE}:(.+)$")
     async def cb_inv_use(
         match: re.Match[str],

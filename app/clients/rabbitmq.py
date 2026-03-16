@@ -68,9 +68,7 @@ class RabbitMQClient:
                     max_size=self._channel_pool_size,
                 )
                 await self._declare_infrastructure()
-                logger.info("RabbitMQ connected, infrastructure declared")
-                return
-            except Exception as exc:
+            except (OSError, ConnectionError, RuntimeError) as exc:
                 last_exc = exc
                 logger.warning(
                     "RabbitMQ connect attempt %d/%d failed: %s",
@@ -80,6 +78,9 @@ class RabbitMQClient:
                 )
                 if attempt < CONNECT_RETRIES:
                     await asyncio.sleep(CONNECT_RETRY_DELAY)
+            else:
+                logger.info("RabbitMQ connected, infrastructure declared")
+                return
 
         raise ConnectionError(
             f"Failed to connect to RabbitMQ after {CONNECT_RETRIES} attempts"
