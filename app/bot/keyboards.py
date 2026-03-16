@@ -40,7 +40,7 @@ def lobby(bot_username: str = "") -> list[list[dict[str, str]]]:
             "text": "\u2753 Справка",
             "callback_data": game.constants.Callback.HELP,
         }
-    return [
+    kb: list[list[dict[str, str]]] = [
         [
             {
                 "text": "\U0001f3ae Войти",
@@ -57,12 +57,33 @@ def lobby(bot_username: str = "") -> list[list[dict[str, str]]]:
                 "callback_data": game.constants.Callback.LEAVE,
             },
             {
-                "text": "\U0001f3ac Начать игру",
-                "callback_data": game.constants.Callback.START_GAME,
+                "text": "\U0001f4ca Счёт",
+                "callback_data": game.constants.Callback.SCORE,
             },
         ],
-        [shop_btn, rules_btn, help_btn],
+        [rules_btn, help_btn],
+        [
+            {
+                "text": "\U0001f680 Старт",
+                "callback_data": game.constants.Callback.START_GAME,
+            },
+            {
+                "text": "\u23f9 Стоп",
+                "callback_data": game.constants.Callback.STOP,
+            },
+        ],
+        [shop_btn],
     ]
+    if bot_username:
+        kb.append(
+            [
+                {
+                    "text": "\U0001f4e9 Управление в личке",
+                    "url": f"https://t.me/{bot_username}?start=help",
+                }
+            ]
+        )
+    return kb
 
 
 def buzzer() -> list[list[dict[str, str]]]:
@@ -102,7 +123,7 @@ def score() -> list[list[dict[str, str]]]:
     return [
         [
             {
-                "text": "🚪 Leave",
+                "text": "🚪 Выйти",
                 "callback_data": game.constants.Callback.LEAVE,
             },
             {
