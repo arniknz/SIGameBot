@@ -6,7 +6,6 @@ import game.constants
 import game.schemas
 import game.services
 
-
 _NOTIFICATION_VIEWS: frozenset[game.constants.ViewName] = frozenset(
     {
         game.constants.ViewName.PLAYER_JOINED,

@@ -66,8 +66,8 @@ class LobbyService:
         edit_message_id: int | None = None,
         lobby_game_id: str | None = None,
     ) -> game.schemas.ServiceResponse:
-        participant_repo = (
-            db.repositories.participant.ParticipantRepository(session)
+        participant_repo = db.repositories.participant.ParticipantRepository(
+            session
         )
         roster = await participant_repo.get_roster(
             active_game.id, active_game.host_id
@@ -379,7 +379,9 @@ class LobbyService:
                     active_game.host_id = new_host.user_id
                     new_host_user = await user_repo.get_by_id(new_host.user_id)
                     new_host_name = (
-                        new_host_user.username if new_host_user else "Неизвестный"
+                        new_host_user.username
+                        if new_host_user
+                        else "Неизвестный"
                     )
                     logger.info(
                         "Host transferred to %s in game %s",

@@ -142,8 +142,7 @@ class ContentService:
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text=(
-                            "📭 Тем пока нет. "
-                            "Создайте: /add_topic <название>"
+                            "📭 Тем пока нет. Создайте: /add_topic <название>"
                         ),
                     )
                 ]
@@ -383,10 +382,7 @@ class ContentService:
                 _result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
-                    text=(
-                        "🗑 Вопрос скрыт. "
-                        "Восстановить: /restore_question"
-                    ),
+                    text=("🗑 Вопрос скрыт. Восстановить: /restore_question"),
                 )
             ]
 

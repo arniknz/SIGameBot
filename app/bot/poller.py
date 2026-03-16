@@ -31,9 +31,7 @@ class Poller:
                 )
                 for update in updates:
                     self._offset = update.update_id + 1
-                    await self._rabbitmq.publish_update(
-                        update.model_dump()
-                    )
+                    await self._rabbitmq.publish_update(update.model_dump())
                     logger.debug(
                         "Published update %d to RabbitMQ", update.update_id
                     )

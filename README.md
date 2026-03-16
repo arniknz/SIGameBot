@@ -1,6 +1,6 @@
 # SIGameBot
 
-Multiplayer Jeopardy (SI Game) bot for Telegram group chats.
+Multiplayer Jeopardy-like (SI Game) bot for Telegram group chats. Interface in **Russian**.
 
 ---
 
@@ -15,8 +15,9 @@ Multiplayer Jeopardy (SI Game) bot for Telegram group chats.
 7. [Step 6 — Stop the Bot](#step-6--stop-the-bot)
 8. [How to Play](#how-to-play)
 9. [Managing Topics and Questions](#managing-topics-and-questions)
-10. [Configuration Reference](#configuration-reference)
-11. [Development](#development)
+10. [Shop and Balance (Private Chat)](#shop-and-balance-private-chat)
+11. [Configuration Reference](#configuration-reference)
+12. [Development](#development)
 
 ---
 
@@ -168,13 +169,7 @@ Check that everything is running:
 docker compose ps -a
 ```
 
-You should see two containers with status `Up`:
-
-```
-NAME              STATUS
-sigamebot-db-1    Up
-sigamebot-bot-1   Up
-```
+The bot container (`sigamebot-bot-1`) and the database (`sigamebot-db-1`) should show status `Up`. RabbitMQ and the optional admin API may also be running.
 
 Check the bot logs to confirm it connected:
 
@@ -212,48 +207,72 @@ docker compose up -d
 
 ### Setting Up a Game
 
-1. **Add the bot** to a Telegram group chat (use the bot's username to find it)
-2. **Create a game** — any member sends `/start` in the group. That person becomes the **host**
-3. **Players join** by pressing the **Join** button. Others can press **Spectate** to watch
-4. The **host starts the game** by sending `/start_game` (at least 2 players required)
+1. **Add the bot** to a Telegram group chat (use the bot's username to find it).
+2. **Create a game** — any member sends `/start` in the group. That person becomes the **host**.
+3. **Players join** using the **Войти** (Join) button; others can press **Смотреть** (Spectate) to watch.
+4. The **host starts the game** with the **Старт** (Start) button or `/start_game` (at least 2 players required).
+
+The lobby message shows **inline buttons in two columns** (readable on mobile):
+
+- **Войти** · **Смотреть** — join as player or spectate  
+- **Выйти** · **Счёт** — leave game, show score  
+- **Правила** · **Справка** — open Rules and Help in a **private chat** with the bot  
+- **Старт** · **Стоп** — start game, stop game (host)  
+- **Магазин** — open Shop in private chat  
+- **Управление в личке** — open bot DM for managing topics and questions  
 
 ### During the Game
 
-1. A random player is selected to pick the first question
-2. The bot shows a board with topics and point values — the current player taps a question
-3. The question appears — all players have **10 (10 is default value, you can change it in .env) seconds** to press the **Buzzer** button
-4. The first player to buzz in has **15 (15 is default value, you can change it in .env) seconds** to type their answer directly in chat
-5. **Correct answer** — player earns the points and picks the next question
-6. **Wrong answer** — points are deducted, the correct answer is shown, the same player picks again
-7. **No one buzzes in** — correct answer is revealed, same player picks again
-8. The game ends when all questions have been played, and the final scoreboard is shown
+1. A random player is chosen to pick the first question.
+2. The bot shows a board with topics and point values; the current player taps a cell.
+3. After the question is shown, everyone has **10 seconds** (configurable) to press **Звонок** (Buzzer).
+4. The first to buzz has **15 seconds** (configurable) to type their answer in the chat.
+5. **Correct** — player gets the points and chooses the next question.
+6. **Wrong** — points are deducted, correct answer is shown, same player chooses again.
+7. **No one buzzes** — correct answer is revealed, same player chooses again.
+8. The game ends when all questions are played; the final scoreboard is shown.
 
 ### Commands in Group Chat
 
 | Command | Description |
-|---|---|
+|--------|-------------|
 | `/start` | Create a new game (you become host) |
 | `/start_game` | Start the game (host only) |
 | `/score` | Show current scoreboard |
 
-All other actions (join, leave, spectate, stop, buzzer, help, rules) are **inline buttons** — no need to type commands.
+Join, leave, spectate, start, stop, score, rules, help, and shop are also available as **inline buttons** under the lobby/game message. **Правила** and **Справка** open the bot in private chat to avoid spamming the group.
 
 ---
 
 ## Managing Topics and Questions
 
-Before playing, you need to add topics and questions. This is done in a **private chat** with the bot (message the bot directly, not in the group).
+Topics and questions are managed in a **private chat** with the bot (click **Управление в личке** in the lobby or message the bot directly).
 
-| Command | What it does |
-|---|---|
-| `/add_topic` | Create a new topic (bot will ask for a name) |
-| `/add_question` | Add a question (bot guides you step by step: pick topic, enter question, answer, and point cost) |
+| Command | Description |
+|--------|-------------|
+| `/add_topic` | Create a new topic (bot asks for a name) |
+| `/add_question` | Add a question (step by step: topic, question text, answer, cost) |
 | `/delete_topic` | Delete a topic and all its questions |
 | `/delete_question` | Delete a single question |
-| `/my_games` | Show games where you are host |
+| `/restore_topic` | Restore a previously deleted topic |
+| `/restore_question` | Restore a previously deleted question |
+| `/my_games` | List games where you are host (with links to open the group) |
 | `/help` | List all commands |
 | `/rules` | Show game rules |
 | `/cancel` | Cancel current action |
+
+In a group, `/help` and `/rules` do not post the full text there — the bot asks you to open a private chat and use the **Правила** / **Справка** buttons or send the command in DM.
+
+## Shop and Balance (Private Chat)
+
+In private chat with the bot:
+
+| Command | Description |
+|--------|-------------|
+| `/shop` | Open the in-game shop (categories and items) |
+| `/balance` | Show your coin balance and daily reward info |
+
+Use the **Магазин** button in the lobby to open the shop in private chat. Items can be used during the game (e.g. hints, double points).
 
 ---
 
@@ -262,20 +281,26 @@ Before playing, you need to add topics and questions. This is done in a **privat
 All settings go in the `.env` file. Only `BOT_TOKEN` is required.
 
 | Variable | Default | Description |
-|---|---|---|
+|----------|---------|-------------|
 | `BOT_TOKEN` | *(required)* | Your Telegram bot token from BotFather |
-| `DB_HOST` | `localhost` | PostgreSQL host (do not change for Docker) |
+| `DB_HOST` | `localhost` | PostgreSQL host (set by Docker for the bot) |
 | `DB_PORT` | `5432` | PostgreSQL port |
 | `DB_NAME` | `sigamebot` | Database name |
 | `DB_USER` | `postgres` | Database user |
 | `DB_PASSWORD` | `postgres` | Database password |
+| `RABBITMQ_HOST` | `localhost` | RabbitMQ host |
+| `RABBITMQ_PORT` | `5672` | RabbitMQ port |
+| `RABBITMQ_USER` | `guest` | RabbitMQ user |
+| `RABBITMQ_PASSWORD` | `guest` | RabbitMQ password |
 | `WORKERS_COUNT` | `3` | Number of concurrent update workers |
+| `QUESTION_SELECTION_TIMEOUT` | `30` | Seconds for the current player to choose a question |
 | `BUZZER_TIMEOUT` | `10` | Seconds to wait for a buzzer press |
 | `ANSWER_TIMEOUT` | `15` | Seconds to wait for an answer after buzzing |
 | `LOG_LEVEL` | `INFO` | Log verbosity: DEBUG, INFO, WARNING, ERROR |
 | `LOG_FILE` | `logs/bot.log` | Log file path (auto-rotated at 10 MB) |
+| `ADMIN_API_PORT` | `8000` | Port for the optional admin API (when running with docker compose) |
 
-When using Docker, `DB_HOST` and `DB_PORT` are set automatically by `docker-compose.yml` — you don't need to touch them.
+When using Docker, `DB_HOST`, `DB_PORT`, and RabbitMQ settings are applied by `docker-compose.yml`; you usually only set `BOT_TOKEN` and optionally the timeouts and log level.
 
 ---
 

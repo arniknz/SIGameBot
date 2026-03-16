@@ -266,7 +266,9 @@ def _render_choosing_timeout(cid: int, p: _P) -> game.schemas.GameResponse:
     )
 
 
-def _render_game_ended_no_players(cid: int, _p: _P) -> game.schemas.GameResponse:
+def _render_game_ended_no_players(
+    cid: int, _p: _P
+) -> game.schemas.GameResponse:
     return _make(
         cid,
         (
@@ -602,9 +604,7 @@ _SIMPLE_VIEWS: dict[game.constants.ViewName, str] = {
     game.constants.ViewName.GAME_ALREADY_STARTED: (
         "⏳ Игра уже началась. Ждите следующего раунда!"
     ),
-    game.constants.ViewName.GAME_IN_PROGRESS: (
-        "🕹 Игра уже идёт!"
-    ),
+    game.constants.ViewName.GAME_IN_PROGRESS: ("🕹 Игра уже идёт!"),
     game.constants.ViewName.ONLY_HOST: (
         "🚫 Только ведущий может выполнить это действие."
     ),
@@ -646,15 +646,11 @@ def _render_simple_with_username(
 
 
 _USERNAME_VIEWS: dict[game.constants.ViewName, str] = {
-    game.constants.ViewName.ALREADY_IN_GAME: (
-        "ℹ️ {username}, вы уже в игре!"
-    ),
+    game.constants.ViewName.ALREADY_IN_GAME: ("ℹ️ {username}, вы уже в игре!"),
     game.constants.ViewName.ALREADY_SPECTATING: (
         "ℹ️ {username}, вы уже смотрите игру!"
     ),
-    game.constants.ViewName.NOT_IN_GAME: (
-        "🤔 {username}, вы не в этой игре."
-    ),
+    game.constants.ViewName.NOT_IN_GAME: ("🤔 {username}, вы не в этой игре."),
 }
 
 _ALERT_VIEWS: frozenset[game.constants.ViewName] = frozenset(

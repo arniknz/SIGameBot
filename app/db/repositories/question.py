@@ -448,9 +448,7 @@ class QuestionRepository:
     async def hidden_questions_for_user(
         self,
         user_id: int,
-    ) -> list[
-        sqlalchemy.Row[tuple[game.models.QuestionModel, str]]
-    ]:
+    ) -> list[sqlalchemy.Row[tuple[game.models.QuestionModel, str]]]:
         statement = (
             sqlalchemy.select(
                 game.models.QuestionModel,

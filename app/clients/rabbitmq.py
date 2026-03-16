@@ -31,7 +31,9 @@ class RabbitMQClient:
         self._channel_pool_size = channel_pool_size
         self._connection_pool: aio_pika.pool.Pool | None = None
         self._channel_pool: aio_pika.pool.Pool | None = None
-        self._consumer_connections: list[aio_pika.abc.AbstractRobustConnection] = []
+        self._consumer_connections: list[
+            aio_pika.abc.AbstractRobustConnection
+        ] = []
 
     async def _create_connection(self) -> aio_pika.abc.AbstractRobustConnection:
         return await aio_pika.connect_robust(self._url)

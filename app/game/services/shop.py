@@ -578,8 +578,7 @@ class ShopService:
         elif effect == game.constants.ItemEffect.BONUS_POINTS:
             participant.score += game.shop_items.BONUS_START_POINTS
             effect_text = (
-                f"{item_def.emoji} +{game.shop_items.BONUS_START_POINTS} "
-                f"очков!"
+                f"{item_def.emoji} +{game.shop_items.BONUS_START_POINTS} очков!"
             )
 
         elif effect == game.constants.ItemEffect.STEAL_POINTS:
