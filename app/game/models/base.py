@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import sqlalchemy.orm
+import game.base
 
-
-class Base(sqlalchemy.orm.DeclarativeBase):
-    pass
+Base = game.base.Base

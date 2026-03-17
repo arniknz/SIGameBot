@@ -4,7 +4,7 @@ import datetime
 import typing
 import uuid
 
-import game.models.base
+import game.base
 import sqlalchemy
 import sqlalchemy.dialects.postgresql
 import sqlalchemy.orm
@@ -15,7 +15,7 @@ if typing.TYPE_CHECKING:
     UserModel = game.models.user.UserModel
 
 
-class ShopItemModel(game.models.base.Base):
+class ShopItemModel(game.base.Base):
     __tablename__ = "shop_items"
 
     id: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
@@ -48,7 +48,7 @@ class ShopItemModel(game.models.base.Base):
     )
 
 
-class UserInventoryModel(game.models.base.Base):
+class UserInventoryModel(game.base.Base):
     __tablename__ = "user_inventory"
 
     id: sqlalchemy.orm.Mapped[uuid.UUID] = sqlalchemy.orm.mapped_column(
@@ -88,7 +88,7 @@ class UserInventoryModel(game.models.base.Base):
     item: sqlalchemy.orm.Mapped[ShopItemModel] = sqlalchemy.orm.relationship()
 
 
-class GameItemUsageModel(game.models.base.Base):
+class GameItemUsageModel(game.base.Base):
     __tablename__ = "game_item_usage"
 
     id: sqlalchemy.orm.Mapped[uuid.UUID] = sqlalchemy.orm.mapped_column(

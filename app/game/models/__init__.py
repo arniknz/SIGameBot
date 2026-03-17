@@ -1,22 +1,22 @@
 from __future__ import annotations
 
-import game.models.base
-import game.models.game
-import game.models.question
-import game.models.shop
-import game.models.user
+import game.models.base as _base
+import game.models.game as _game
+import game.models.question as _question
+import game.models.shop as _shop
+import game.models.user as _user
 
-Base = game.models.base.Base
-GameModel = game.models.game.GameModel
-GameStateModel = game.models.game.GameStateModel
-ParticipantModel = game.models.game.ParticipantModel
-QuestionInGameModel = game.models.question.QuestionInGameModel
-QuestionModel = game.models.question.QuestionModel
-TopicModel = game.models.question.TopicModel
-GameItemUsageModel = game.models.shop.GameItemUsageModel
-ShopItemModel = game.models.shop.ShopItemModel
-UserInventoryModel = game.models.shop.UserInventoryModel
-UserModel = game.models.user.UserModel
+Base = _base.Base
+GameModel = _game.GameModel
+GameStateModel = _game.GameStateModel
+ParticipantModel = _game.ParticipantModel
+QuestionInGameModel = _question.QuestionInGameModel
+QuestionModel = _question.QuestionModel
+TopicModel = _question.TopicModel
+GameItemUsageModel = _shop.GameItemUsageModel
+ShopItemModel = _shop.ShopItemModel
+UserInventoryModel = _shop.UserInventoryModel
+UserModel = _user.UserModel
 
 __all__ = [
     "Base",
