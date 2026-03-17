@@ -12,28 +12,10 @@ import db.repositories.user
 import game.constants
 import game.models
 import game.schemas
+import game.utils
 import sqlalchemy.ext.asyncio
 
 logger = logging.getLogger(__name__)
-
-
-def _result(
-    chat_id: int,
-    view: game.constants.ViewName,
-    *,
-    is_alert: bool = False,
-    edit_message_id: int | None = None,
-    lobby_game_id: str | None = None,
-    **payload: object,
-) -> game.schemas.ServiceResponse:
-    return game.schemas.ServiceResponse(
-        chat_id=chat_id,
-        view=view,
-        payload=dict(payload),
-        is_alert=is_alert,
-        edit_message_id=edit_message_id,
-        lobby_game_id=lobby_game_id,
-    )
 
 
 class LobbyService:
@@ -72,7 +54,7 @@ class LobbyService:
         roster = await participant_repo.get_roster(
             active_game.id, active_game.host_id
         )
-        return _result(
+        return game.utils.servicegame.utils.service_result(
             chat_id,
             game.constants.ViewName.LOBBY,
             edit_message_id=edit_message_id,
@@ -117,7 +99,7 @@ class LobbyService:
             active_game = await game_repo.get_active_by_chat(chat_id)
             if active_game is not None:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.GAME_ALREADY_RUNNING,
                     )
@@ -169,7 +151,7 @@ class LobbyService:
             active_game = await game_repo.get_active_by_chat(chat_id)
             if active_game is None:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.NO_ACTIVE_GAME,
                     )
@@ -177,7 +159,7 @@ class LobbyService:
 
             if active_game.status != game.constants.GameStatus.WAITING:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.GAME_ALREADY_STARTED,
                     )
@@ -195,7 +177,7 @@ class LobbyService:
                     and existing.role == game.constants.ParticipantRole.PLAYER
                 ):
                     return [
-                        _result(
+                        game.utils.service_result(
                             chat_id,
                             game.constants.ViewName.ALREADY_IN_GAME,
                             username=username,
@@ -232,7 +214,7 @@ class LobbyService:
             )
             return [
                 lobby,
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.PLAYER_JOINED,
                     username=username,
@@ -260,7 +242,7 @@ class LobbyService:
             active_game = await game_repo.get_active_by_chat(chat_id)
             if active_game is None:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.NO_ACTIVE_GAME,
                     )
@@ -276,7 +258,7 @@ class LobbyService:
                     and existing.is_active
                 ):
                     return [
-                        _result(
+                        game.utils.service_result(
                             chat_id,
                             game.constants.ViewName.ALREADY_SPECTATING,
                             username=username,
@@ -306,7 +288,7 @@ class LobbyService:
             )
             return [
                 lobby,
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.NOW_SPECTATING,
                     username=username,
@@ -332,7 +314,7 @@ class LobbyService:
             active_game = await game_repo.get_active_by_chat(chat_id)
             if active_game is None:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.NO_ACTIVE_GAME_HERE,
                     )
@@ -344,7 +326,7 @@ class LobbyService:
             )
             if participant is None or not participant.is_active:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.NOT_IN_GAME,
                         username=username,
@@ -402,7 +384,7 @@ class LobbyService:
                         session, active_game, lobby_message_id
                     )
                     return [
-                        _result(
+                        game.utils.service_result(
                             chat_id,
                             game.constants.ViewName.GAME_ENDED_NO_PLAYERS,
                             edit_message_id=edit_id or None,
@@ -426,7 +408,7 @@ class LobbyService:
             )
             return [
                 lobby,
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.LEFT_GAME,
                     username=username,
@@ -460,7 +442,7 @@ class LobbyService:
                 game_state.timer_ends_at = None
 
         responses: list[game.schemas.ServiceResponse] = [
-            _result(
+            game.utils.service_result(
                 chat_id,
                 game.constants.ViewName.LEFT_GAME,
                 username=username,
@@ -498,7 +480,7 @@ class LobbyService:
                 new_host_user.username if new_host_user else "Неизвестный"
             )
             responses.append(
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.HOST_TRANSFERRED,
                     old_host=username,
@@ -546,7 +528,7 @@ class LobbyService:
 
         next_name = await game_repo.current_player_username(active_game)
         return [
-            _result(
+            game.utils.service_result(
                 chat_id,
                 game.constants.ViewName.BOARD,
                 intro=f"🔄 {username} вышел(а) во время хода.",
@@ -589,7 +571,7 @@ class LobbyService:
             active_game = await game_repo.get_active_by_chat(chat_id)
             if active_game is None:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.NO_ACTIVE_GAME_HERE,
                     )
@@ -598,7 +580,7 @@ class LobbyService:
             user = await user_repo.get_by_telegram_id(telegram_id)
             if user is None or user.id != active_game.host_id:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.ONLY_HOST,
                     )
@@ -644,7 +626,7 @@ class LobbyService:
             else "🏁 Игра окончена!\n\n🏆 Итоговый счёт:"
         )
         return [
-            _result(
+            game.utils.service_result(
                 chat_id,
                 game.constants.ViewName.SCOREBOARD,
                 title=title,

@@ -15,25 +15,11 @@ import game.constants
 import game.models
 import game.schemas
 import game.shop_items
+import game.utils
 import sqlalchemy
 import sqlalchemy.ext.asyncio
 
 logger = logging.getLogger(__name__)
-
-
-def _result(
-    chat_id: int,
-    view: game.constants.ViewName,
-    *,
-    is_alert: bool = False,
-    **payload: object,
-) -> game.schemas.ServiceResponse:
-    return game.schemas.ServiceResponse(
-        chat_id=chat_id,
-        view=view,
-        payload=dict(payload),
-        is_alert=is_alert,
-    )
 
 
 class GameplayService:
@@ -112,7 +98,7 @@ class GameplayService:
             )
 
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.BOARD,
                     intro="🎯 Игра началась! Поехали!",
@@ -134,7 +120,7 @@ class GameplayService:
         active_game = await game_repo.get_active_by_chat(chat_id)
         if active_game is None:
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.NO_ACTIVE_GAME,
                 )
@@ -142,7 +128,7 @@ class GameplayService:
 
         if active_game.status != game.constants.GameStatus.WAITING:
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.GAME_IN_PROGRESS,
                 )
@@ -151,7 +137,7 @@ class GameplayService:
         user = await user_repo.get_by_telegram_id(telegram_id)
         if user is None or user.id != active_game.host_id:
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.ONLY_HOST,
                 )
@@ -162,7 +148,7 @@ class GameplayService:
         )
         if len(active_players) < 2:
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.NEED_TWO_PLAYERS,
                 )
@@ -171,7 +157,7 @@ class GameplayService:
         all_question_ids = await question_repo.all_question_ids()
         if not all_question_ids:
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.NO_QUESTIONS,
                 )
@@ -242,7 +228,7 @@ class GameplayService:
             )
 
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.BUZZER_PRESSED,
                     username=username,
@@ -287,7 +273,7 @@ class GameplayService:
                 or participant.id != active_game.current_player_id
             ):
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.NOT_YOUR_TURN,
                     )
@@ -296,7 +282,7 @@ class GameplayService:
             detail = await question_repo.get_random_pending(active_game.id)
             if detail is None:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         is_alert=True,
@@ -339,7 +325,7 @@ class GameplayService:
             )
 
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.CAT_REVEALED,
                     topic=topic_title,
@@ -388,7 +374,7 @@ class GameplayService:
                 or ctx.participant.id != ctx.active_game.current_player_id
             ):
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.NOT_YOUR_TURN,
                     )
@@ -400,7 +386,7 @@ class GameplayService:
             )
             if isinstance(validation, str):
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         is_alert=True,
@@ -447,7 +433,7 @@ class GameplayService:
             ctx.active_game.id,
         )
         ctx.responses = [
-            _result(
+            game.utils.service_result(
                 chat_id,
                 game.constants.ViewName.QUESTION_ASKED,
                 topic=ctx.topic_title,
@@ -478,7 +464,7 @@ class GameplayService:
                     seconds=self._answer_timeout,
                 )
                 ctx.responses.append(
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.BUZZER_PRESSED,
                         username=f"⚡ {ab_name} (auto)",
@@ -588,7 +574,7 @@ class GameplayService:
             active_game = await game_repo.get_active_by_chat(chat_id)
             if active_game is None:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.NO_ACTIVE_GAME_HERE,
                     )
@@ -597,7 +583,7 @@ class GameplayService:
             scoreboard_data = await game_repo.scoreboard(active_game.id)
             if not scoreboard_data:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="Пока нет игроков.",
@@ -605,7 +591,7 @@ class GameplayService:
                 ]
 
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.SCOREBOARD,
                     title="📊 Текущий счёт:\n",
@@ -673,7 +659,7 @@ class GameplayService:
             )
 
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.ALL_IN_ACTIVATED,
                     username=username,
@@ -700,7 +686,7 @@ class GameplayService:
         a.question_repo = db.repositories.question.QuestionRepository(session)
         if game_state.current_question_id is None:
             return [
-                _result(
+                game.utils.service_result(
                     a.chat_id,
                     game.constants.ViewName.PLAIN,
                     text="Данные вопроса не найдены.",
@@ -711,7 +697,7 @@ class GameplayService:
         )
         if a.detail is None:
             return [
-                _result(
+                game.utils.service_result(
                     a.chat_id,
                     game.constants.ViewName.PLAIN,
                     text="Данные вопроса не найдены.",
@@ -843,7 +829,7 @@ class GameplayService:
         question_in_game.answered_by = buzzer_participant.id
         question_in_game.answered_at = now
         return [
-            _result(
+            game.utils.service_result(
                 chat_id,
                 game.constants.ViewName.ANSWER_CORRECT,
                 username=username,
@@ -864,7 +850,7 @@ class GameplayService:
         question_in_game.answered_by = None
         question_in_game.answered_at = None
         return [
-            _result(
+            game.utils.service_result(
                 chat_id,
                 game.constants.ViewName.ANSWER_WRONG,
                 username=username,
@@ -905,7 +891,7 @@ class GameplayService:
         question_in_game.answered_by = buzzer_participant.id
         question_in_game.answered_at = now
         return [
-            _result(
+            game.utils.service_result(
                 chat_id,
                 game.constants.ViewName.ANSWER_WRONG,
                 username=username,
@@ -927,7 +913,7 @@ class GameplayService:
         question_in_game.answered_by = buzzer_participant.id
         question_in_game.answered_at = now
         return [
-            _result(
+            game.utils.service_result(
                 chat_id,
                 game.constants.ViewName.ANSWER_WRONG,
                 username=username,
@@ -957,7 +943,7 @@ class GameplayService:
         question_in_game.answered_by = buzzer_participant.id
         question_in_game.answered_at = now
         return [
-            _result(
+            game.utils.service_result(
                 chat_id,
                 game.constants.ViewName.ANSWER_WRONG,
                 username=username,
@@ -1013,7 +999,7 @@ class GameplayService:
             active_game
         )
         return [
-            _result(
+            game.utils.service_result(
                 chat_id,
                 game.constants.ViewName.BOARD,
                 intro="",
@@ -1055,7 +1041,7 @@ class GameplayService:
             else "🏁 Игра окончена!\n\n🏆 Итоговый счёт:"
         )
         return [
-            _result(
+            game.utils.service_result(
                 chat_id,
                 game.constants.ViewName.SCOREBOARD,
                 title=title,

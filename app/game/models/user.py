@@ -3,15 +3,17 @@ from __future__ import annotations
 import datetime
 import typing
 
+import game.models.base
 import sqlalchemy
 import sqlalchemy.orm
-from game.models.base import Base
 
 if typing.TYPE_CHECKING:
-    from game.models.game import ParticipantModel
+    import game.models.game
+
+    ParticipantModel = game.models.game.ParticipantModel
 
 
-class UserModel(Base):
+class UserModel(game.models.base.Base):
     __tablename__ = "users"
 
     id: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(

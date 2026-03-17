@@ -4,22 +4,26 @@ import typing
 import uuid
 
 import fastapi
+import game.constants
 import game.models
 import sqlalchemy
 import sqlalchemy.ext.asyncio
-from web.api import dependencies, schemas
+import web.api.dependencies
+import web.api.schemas
 
 router = fastapi.APIRouter(prefix="/topics", tags=["Topics"])
 
 
-@router.get("", response_model=list[schemas.TopicWithCountOut])
+@router.get("", response_model=list[web.api.schemas.TopicWithCountOut])
 async def list_topics(
     session: typing.Annotated[
         sqlalchemy.ext.asyncio.AsyncSession,
-        fastapi.Depends(dependencies.get_session),
+        fastapi.Depends(web.api.dependencies.get_session),
     ],
-    _admin: typing.Annotated[str, fastapi.Depends(dependencies.require_admin)],
-) -> list[schemas.TopicWithCountOut]:
+    _admin: typing.Annotated[
+        str, fastapi.Depends(web.api.dependencies.require_admin)
+    ],
+) -> list[web.api.schemas.TopicWithCountOut]:
     stmt = (
         sqlalchemy.select(
             game.models.TopicModel,
@@ -36,7 +40,7 @@ async def list_topics(
     )
     rows = (await session.execute(stmt)).all()
     return [
-        schemas.TopicWithCountOut(
+        web.api.schemas.TopicWithCountOut(
             id=topic.id,
             title=topic.title,
             is_visible=topic.is_visible,
@@ -48,16 +52,18 @@ async def list_topics(
 
 @router.post(
     "",
-    response_model=schemas.TopicOut,
+    response_model=web.api.schemas.TopicOut,
     status_code=201,
 )
 async def create_topic(
-    body: schemas.TopicCreate,
+    body: web.api.schemas.TopicCreate,
     session: typing.Annotated[
         sqlalchemy.ext.asyncio.AsyncSession,
-        fastapi.Depends(dependencies.get_session),
+        fastapi.Depends(web.api.dependencies.get_session),
     ],
-    _admin: typing.Annotated[str, fastapi.Depends(dependencies.require_admin)],
+    _admin: typing.Annotated[
+        str, fastapi.Depends(web.api.dependencies.require_admin)
+    ],
 ) -> game.models.TopicModel:
     existing = (
         await session.execute(
@@ -69,7 +75,9 @@ async def create_topic(
     if existing:
         raise fastapi.HTTPException(
             status_code=409,
-            detail=f"Topic '{body.title}' already exists",
+            detail=game.constants.API_MSG_TOPIC_ALREADY_EXISTS.format(
+                body.title
+            ),
         )
     topic = game.models.TopicModel(title=body.title)
     session.add(topic)
@@ -78,19 +86,24 @@ async def create_topic(
     return topic
 
 
-@router.put("/{topic_id}", response_model=schemas.TopicOut)
+@router.put("/{topic_id}", response_model=web.api.schemas.TopicOut)
 async def update_topic(
     topic_id: uuid.UUID,
-    body: schemas.TopicUpdate,
+    body: web.api.schemas.TopicUpdate,
     session: typing.Annotated[
         sqlalchemy.ext.asyncio.AsyncSession,
-        fastapi.Depends(dependencies.get_session),
+        fastapi.Depends(web.api.dependencies.get_session),
     ],
-    _admin: typing.Annotated[str, fastapi.Depends(dependencies.require_admin)],
+    _admin: typing.Annotated[
+        str, fastapi.Depends(web.api.dependencies.require_admin)
+    ],
 ) -> game.models.TopicModel:
     topic = await session.get(game.models.TopicModel, topic_id)
     if not topic:
-        raise fastapi.HTTPException(status_code=404, detail="Topic not found")
+        raise fastapi.HTTPException(
+            status_code=404,
+            detail=game.constants.API_MSG_TOPIC_NOT_FOUND,
+        )
 
     dup = (
         await session.execute(
@@ -103,7 +116,9 @@ async def update_topic(
     if dup:
         raise fastapi.HTTPException(
             status_code=409,
-            detail=f"Topic '{body.title}' already exists",
+            detail=game.constants.API_MSG_TOPIC_ALREADY_EXISTS.format(
+                body.title
+            ),
         )
 
     topic.title = body.title
@@ -117,13 +132,18 @@ async def delete_topic(
     topic_id: uuid.UUID,
     session: typing.Annotated[
         sqlalchemy.ext.asyncio.AsyncSession,
-        fastapi.Depends(dependencies.get_session),
+        fastapi.Depends(web.api.dependencies.get_session),
     ],
-    _admin: typing.Annotated[str, fastapi.Depends(dependencies.require_admin)],
+    _admin: typing.Annotated[
+        str, fastapi.Depends(web.api.dependencies.require_admin)
+    ],
 ) -> fastapi.Response:
     topic = await session.get(game.models.TopicModel, topic_id)
     if not topic:
-        raise fastapi.HTTPException(status_code=404, detail="Topic not found")
+        raise fastapi.HTTPException(
+            status_code=404,
+            detail=game.constants.API_MSG_TOPIC_NOT_FOUND,
+        )
 
     question_ids = [
         row[0]

@@ -3,6 +3,19 @@ from __future__ import annotations
 import enum
 
 
+class ChatType(enum.StrEnum):
+    PRIVATE = "private"
+    GROUP = "group"
+    SUPERGROUP = "supergroup"
+    CHANNEL = "channel"
+
+
+class StartArg(enum.StrEnum):
+    SHOP = "shop"
+    RULES = "rules"
+    HELP = "help"
+
+
 class GameStatus(enum.StrEnum):
     WAITING = "waiting"
     ACTIVE = "active"
@@ -214,3 +227,25 @@ class ViewName(enum.StrEnum):
     GAME_ENDED_AFK = "game_ended_afk"
     LOBBY = "lobby"
     ANSWER_PROMPT = "answer_prompt"
+
+
+GAME_STATUS_ICON: dict[GameStatus, str] = {
+    GameStatus.WAITING: "\u23f3",
+    GameStatus.ACTIVE: "\U0001f3af",
+}
+GAME_STATUS_LABEL: dict[GameStatus, str] = {
+    GameStatus.WAITING: "Ожидание",
+    GameStatus.ACTIVE: "Идёт",
+}
+DEFAULT_STATUS_ICON = "\u2753"
+
+API_MSG_SERVER_MISCONFIGURED = "Server misconfigured"
+API_MSG_INVALID_CREDENTIALS = "Invalid credentials"
+API_MSG_USER_NOT_FOUND = "User not found"
+API_MSG_GAME_NOT_FOUND = "Game not found"
+API_MSG_TOPIC_NOT_FOUND = "Topic not found"
+API_MSG_QUESTION_NOT_FOUND = "Question not found"
+API_MSG_TOPIC_ALREADY_EXISTS = "Topic '{}' already exists"
+API_MSG_CSV_COLUMNS = "CSV must have columns: {}"
+
+TIMER_CHECK_BODY = '{"type":"timer_check"}'

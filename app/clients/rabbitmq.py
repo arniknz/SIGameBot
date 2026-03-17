@@ -7,6 +7,7 @@ import logging
 import aio_pika
 import aio_pika.abc
 import aio_pika.pool
+import game.constants
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +119,7 @@ class RabbitMQClient:
             )
 
     async def publish_timer_check(self, delay_ms: int = 0) -> None:
-        body = b'{"type":"timer_check"}'
+        body = game.constants.TIMER_CHECK_BODY.encode()
         async with self._get_channel_pool().acquire() as channel:
             if delay_ms <= 0:
                 await channel.default_exchange.publish(

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import collections.abc
 import re
+import typing
 
 import bot.dialog
 import bot.router
@@ -20,12 +22,22 @@ def register(
     _register_callbacks(router, content, dialog)
 
 
-def _make_private_start(content: game.services.ContentService, shop):
-    async def handler(chat_id: int, telegram_id: int, args: str = "", **_):
-        if args == "shop" and shop is not None:
+def _make_private_start(
+    content: game.services.ContentService,
+    shop: game.services.ShopService | None,
+) -> collections.abc.Callable[
+    ...,
+    collections.abc.Coroutine[
+        typing.Any, typing.Any, list[game.schemas.GameResponse]
+    ],
+]:
+    async def handler(
+        chat_id: int, telegram_id: int, args: str = "", **_: typing.Any
+    ) -> list[game.schemas.GameResponse]:
+        if args == game.constants.StartArg.SHOP and shop is not None:
             result = await shop.handle_shop_main(chat_id, telegram_id)
             return bot.views.render_many(result)
-        if args == "rules":
+        if args == game.constants.StartArg.RULES:
             result = await content.handle_rules(chat_id)
             return bot.views.render_many(result)
         result = await content.handle_help(chat_id)
@@ -172,7 +184,7 @@ def _register_commands(
     )
 
 
-def _dialog_cancelled(chat_id: int):
+def _dialog_cancelled(chat_id: int) -> list[game.schemas.GameResponse]:
     return bot.views.render_many(
         [
             game.schemas.ServiceResponse(
