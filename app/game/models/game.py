@@ -5,17 +5,20 @@ import typing
 import uuid
 
 import game.constants
+import game.models.base
 import sqlalchemy
 import sqlalchemy.dialects.postgresql
 import sqlalchemy.orm
-from game.models.base import Base
 
 if typing.TYPE_CHECKING:
-    from game.models.question import QuestionInGameModel
-    from game.models.user import UserModel
+    import game.models.question
+    import game.models.user
+
+    QuestionInGameModel = game.models.question.QuestionInGameModel
+    UserModel = game.models.user.UserModel
 
 
-class GameModel(Base):
+class GameModel(game.models.base.Base):
     __tablename__ = "games"
 
     id: sqlalchemy.orm.Mapped[uuid.UUID] = sqlalchemy.orm.mapped_column(
@@ -71,7 +74,7 @@ class GameModel(Base):
     )
 
 
-class ParticipantModel(Base):
+class ParticipantModel(game.models.base.Base):
     __tablename__ = "participants"
     __table_args__ = (
         sqlalchemy.UniqueConstraint("game_id", "user_id", name="uq_game_user"),
@@ -125,7 +128,7 @@ class ParticipantModel(Base):
     )
 
 
-class GameStateModel(Base):
+class GameStateModel(game.models.base.Base):
     __tablename__ = "game_states"
 
     id: sqlalchemy.orm.Mapped[uuid.UUID] = sqlalchemy.orm.mapped_column(

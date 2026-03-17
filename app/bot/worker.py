@@ -7,6 +7,7 @@ import logging
 import bot.dispatcher
 import clients.rabbitmq
 import clients.schemas
+import game.constants
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +65,8 @@ class Worker:
         self, update: clients.schemas.Update
     ) -> None:
         is_group = (
-            update.message is not None and update.message.chat.type != "private"
+            update.message is not None
+            and update.message.chat.type != game.constants.ChatType.PRIVATE
         ) or update.callback_query is not None
 
         if not is_group:

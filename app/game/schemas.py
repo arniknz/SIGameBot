@@ -1,7 +1,7 @@
 import dataclasses
 import typing
 
-from game.constants import DialogStep, ViewName
+import game.constants
 
 
 @dataclasses.dataclass
@@ -17,7 +17,7 @@ class GameResponse:
 @dataclasses.dataclass
 class ServiceResponse:
     chat_id: int
-    view: ViewName
+    view: game.constants.ViewName
     payload: dict[str, typing.Any] = dataclasses.field(default_factory=dict)
     edit_message_id: int | None = None
     is_alert: bool = False
@@ -26,7 +26,7 @@ class ServiceResponse:
 
 @dataclasses.dataclass
 class DialogState:
-    step: DialogStep
+    step: game.constants.DialogStep
     game_chat_id: int = 0
     topic_name: str = ""
     topic_id: str = ""

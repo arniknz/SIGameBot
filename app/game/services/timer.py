@@ -11,19 +11,10 @@ import db.repositories.user
 import game.constants
 import game.models
 import game.schemas
+import game.utils
 import sqlalchemy.ext.asyncio
 
 logger = logging.getLogger(__name__)
-
-
-def _result(
-    chat_id: int, view: game.constants.ViewName, **payload: object
-) -> game.schemas.ServiceResponse:
-    return game.schemas.ServiceResponse(
-        chat_id=chat_id,
-        view=view,
-        payload=dict(payload),
-    )
 
 
 class TimerService:
@@ -121,7 +112,7 @@ class TimerService:
                 game_state.failed_selections_count,
             )
             responses: list[game.schemas.ServiceResponse] = [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.GAME_ENDED_AFK,
                     failed_count=game_state.failed_selections_count,
@@ -160,12 +151,12 @@ class TimerService:
         )
 
         return [
-            _result(
+            game.utils.service_result(
                 chat_id,
                 game.constants.ViewName.CHOOSING_TIMEOUT,
                 old_player=old_player_name,
             ),
-            _result(
+            game.utils.service_result(
                 chat_id,
                 game.constants.ViewName.BOARD,
                 intro="",
@@ -205,7 +196,7 @@ class TimerService:
         game_state.cost_override = None
 
         responses: list[game.schemas.ServiceResponse] = [
-            _result(
+            game.utils.service_result(
                 chat_id,
                 game.constants.ViewName.BUZZER_TIMEOUT,
                 correct_answer=correct_answer,
@@ -272,7 +263,7 @@ class TimerService:
         game_state.all_in_active = False
 
         responses: list[game.schemas.ServiceResponse] = [
-            _result(
+            game.utils.service_result(
                 chat_id,
                 game.constants.ViewName.ANSWER_TIMEOUT,
                 username=buzzer_holder_name,
@@ -316,7 +307,7 @@ class TimerService:
             active_game
         )
         return [
-            _result(
+            game.utils.service_result(
                 chat_id,
                 game.constants.ViewName.BOARD,
                 intro="",
@@ -362,7 +353,7 @@ class TimerService:
             else "🏁 Игра окончена!\n\n🏆 Итоговый счёт:"
         )
         return [
-            _result(
+            game.utils.service_result(
                 chat_id,
                 game.constants.ViewName.SCOREBOARD,
                 title=title,
@@ -430,7 +421,7 @@ class TimerService:
                     active_game
                 )
                 responses.append(
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.BOARD,
                         intro="🔄 Игра восстановлена! Продолжаем.",

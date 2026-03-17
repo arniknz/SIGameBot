@@ -14,27 +14,11 @@ import game.constants
 import game.models
 import game.schemas
 import game.shop_items
+import game.utils
 import sqlalchemy
 import sqlalchemy.ext.asyncio
 
 logger = logging.getLogger(__name__)
-
-
-def _result(
-    chat_id: int,
-    view: game.constants.ViewName,
-    *,
-    edit_message_id: int | None = None,
-    is_alert: bool = False,
-    **payload: object,
-) -> game.schemas.ServiceResponse:
-    return game.schemas.ServiceResponse(
-        chat_id=chat_id,
-        view=view,
-        payload=dict(payload),
-        edit_message_id=edit_message_id,
-        is_alert=is_alert,
-    )
 
 
 class ShopService:
@@ -50,7 +34,7 @@ class ShopService:
         bot_username: str,
     ) -> list[game.schemas.ServiceResponse]:
         return [
-            _result(
+            game.utils.service_result(
                 chat_id,
                 game.constants.ViewName.SHOP_REDIRECT,
                 bot_username=bot_username,
@@ -74,7 +58,7 @@ class ShopService:
 
             item_count = await shop_repo.count_unused_items(user.id)
             responses.append(
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.SHOP_MAIN,
                     balance=user.balance,
@@ -98,7 +82,7 @@ class ShopService:
         amount = game.constants.DAILY_REWARD_AMOUNT
         user.balance += amount
         user.last_daily_claim = now
-        return _result(
+        return game.utils.service_result(
             user.telegram_id,
             game.constants.ViewName.DAILY_REWARD_CLAIMED,
             amount=amount,
@@ -115,7 +99,7 @@ class ShopService:
             category = game.constants.ShopCategory(category_str)
         except ValueError:
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
                     is_alert=True,
@@ -129,7 +113,7 @@ class ShopService:
 
             items = game.shop_items.ITEMS_BY_CATEGORY.get(category, [])
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.SHOP_CATEGORY,
                     category=category,
@@ -148,7 +132,7 @@ class ShopService:
             item_id = int(item_id_str)
         except ValueError:
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
                     is_alert=True,
@@ -159,7 +143,7 @@ class ShopService:
         item_def = game.shop_items.ITEMS_BY_ID.get(item_id)
         if item_def is None:
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
                     is_alert=True,
@@ -174,7 +158,7 @@ class ShopService:
 
             if user.balance < item_def.price:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.SHOP_INSUFFICIENT,
                         balance=user.balance,
@@ -188,7 +172,7 @@ class ShopService:
             )
             if inv is None:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.SHOP_INSUFFICIENT,
                         balance=user.balance,
@@ -206,7 +190,7 @@ class ShopService:
             )
 
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.SHOP_BUY_OK,
                     item=item_def,
@@ -231,7 +215,7 @@ class ShopService:
 
             item_count = await shop_repo.count_unused_items(user.id)
             responses.append(
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.BALANCE_INFO,
                     balance=user.balance,
@@ -286,7 +270,7 @@ class ShopService:
             inventory = await shop_repo.get_unused_inventory(user.id)
             if not inventory:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.INVENTORY_EMPTY,
                         edit_message_id=message_id or None,
@@ -320,7 +304,7 @@ class ShopService:
                 )
 
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.INVENTORY_LIST,
                     edit_message_id=message_id or None,
@@ -374,7 +358,7 @@ class ShopService:
                 )
 
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.ANSWER_PROMPT,
                     edit_message_id=message_id or None,
@@ -394,7 +378,7 @@ class ShopService:
             item_id = int(item_id_str)
         except ValueError:
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
                     is_alert=True,
@@ -404,7 +388,7 @@ class ShopService:
         item_def = game.shop_items.ITEMS_BY_ID.get(item_id)
         if item_def is None:
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
                     is_alert=True,
@@ -429,7 +413,7 @@ class ShopService:
             )
             if u.inv_item is None:
                 return [
-                    _result(
+                    game.utils.service_result(
                         u.chat_id,
                         game.constants.ViewName.PLAIN,
                         is_alert=True,
@@ -439,7 +423,7 @@ class ShopService:
             u.game_data = await self._find_buzzer_game(u.session, u.telegram_id)
             if u.game_data is None:
                 return [
-                    _result(
+                    game.utils.service_result(
                         u.chat_id,
                         game.constants.ViewName.PLAIN,
                         is_alert=True,
@@ -603,7 +587,7 @@ class ShopService:
     ) -> list[game.schemas.ServiceResponse]:
         edit_id = message_id or None
         return [
-            _result(
+            game.utils.service_result(
                 group_chat_id,
                 game.constants.ViewName.ITEM_USED_GROUP,
                 edit_message_id=edit_id,
@@ -663,7 +647,7 @@ class ShopService:
         hint = answer[:3] + "..." if len(answer) > 3 else answer
         edit_id = message_id or None
         return [
-            _result(
+            game.utils.service_result(
                 group_chat_id,
                 game.constants.ViewName.ITEM_USED_GROUP,
                 edit_message_id=edit_id,
@@ -671,7 +655,7 @@ class ShopService:
                 name=item_def.name,
                 remaining_seconds=remaining_seconds,
             ),
-            _result(
+            game.utils.service_result(
                 telegram_id,
                 game.constants.ViewName.ITEM_USED,
                 text=(
@@ -705,7 +689,7 @@ class ShopService:
         answer = detail[3]
         edit_id = message_id or None
         return [
-            _result(
+            game.utils.service_result(
                 group_chat_id,
                 game.constants.ViewName.ITEM_USED_GROUP,
                 edit_message_id=edit_id,
@@ -713,7 +697,7 @@ class ShopService:
                 name=item_def.name,
                 remaining_seconds=remaining_seconds,
             ),
-            _result(
+            game.utils.service_result(
                 telegram_id,
                 game.constants.ViewName.ITEM_USED,
                 text=(

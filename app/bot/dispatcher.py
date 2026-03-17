@@ -72,7 +72,7 @@ class Dispatcher:
         user = msg.from_user
         telegram_id = user.id if user else 0
         username = user.first_name if user else "Неизвестный"
-        is_private = msg.chat.type == "private"
+        is_private = msg.chat.type == game.constants.ChatType.PRIVATE
 
         if is_private and self._dialog.has_active(telegram_id):
             responses = await self._handle_dialog_input(
