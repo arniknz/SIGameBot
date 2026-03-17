@@ -9,38 +9,43 @@ import game.models
 import sqlalchemy
 import sqlalchemy.ext.asyncio
 import sqlalchemy.orm
-from web.api import dependencies, schemas
+import web.api.dependencies
+import web.api.schemas
 
 router = fastapi.APIRouter(prefix="/games", tags=["Games"])
 
 
-@router.get("", response_model=list[schemas.GameOut])
+@router.get("", response_model=list[web.api.schemas.GameOut])
 async def list_games(
     session: typing.Annotated[
         sqlalchemy.ext.asyncio.AsyncSession,
-        fastapi.Depends(dependencies.get_session),
+        fastapi.Depends(web.api.dependencies.get_session),
     ],
-    _admin: typing.Annotated[str, fastapi.Depends(dependencies.require_admin)],
+    _admin: typing.Annotated[
+        str, fastapi.Depends(web.api.dependencies.require_admin)
+    ],
     status: str | None = None,
-) -> list[schemas.GameOut]:
+) -> list[web.api.schemas.GameOut]:
     stmt = sqlalchemy.select(game.models.GameModel).order_by(
         game.models.GameModel.created_at.desc(),
     )
     if status is not None:
         stmt = stmt.where(game.models.GameModel.status == status)
     rows = (await session.execute(stmt)).scalars().all()
-    return [schemas.GameOut.model_validate(g) for g in rows]
+    return [web.api.schemas.GameOut.model_validate(g) for g in rows]
 
 
-@router.get("/{game_id}", response_model=schemas.GameDetailOut)
+@router.get("/{game_id}", response_model=web.api.schemas.GameDetailOut)
 async def get_game(
     game_id: uuid.UUID,
     session: typing.Annotated[
         sqlalchemy.ext.asyncio.AsyncSession,
-        fastapi.Depends(dependencies.get_session),
+        fastapi.Depends(web.api.dependencies.get_session),
     ],
-    _admin: typing.Annotated[str, fastapi.Depends(dependencies.require_admin)],
-) -> schemas.GameDetailOut:
+    _admin: typing.Annotated[
+        str, fastapi.Depends(web.api.dependencies.require_admin)
+    ],
+) -> web.api.schemas.GameDetailOut:
     stmt = (
         sqlalchemy.select(game.models.GameModel)
         .options(
@@ -52,7 +57,10 @@ async def get_game(
     )
     g = (await session.execute(stmt)).scalar_one_or_none()
     if not g:
-        raise fastapi.HTTPException(status_code=404, detail="Game not found")
+        raise fastapi.HTTPException(
+            status_code=404,
+            detail=game.constants.API_MSG_GAME_NOT_FOUND,
+        )
 
     total = (
         await session.execute(
@@ -74,7 +82,7 @@ async def get_game(
     ).scalar_one()
 
     participants = [
-        schemas.ParticipantOut(
+        web.api.schemas.ParticipantOut(
             id=p.id,
             user_id=p.user_id,
             role=p.role,
@@ -86,7 +94,7 @@ async def get_game(
         for p in g.participants
     ]
 
-    return schemas.GameDetailOut(
+    return web.api.schemas.GameDetailOut(
         id=g.id,
         chat_id=g.chat_id,
         status=g.status,

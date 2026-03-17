@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 
-from game.constants import ItemEffect, ShopCategory
+import game.constants
 
 EXTRA_TIME_SECONDS = 5
 BONUS_START_POINTS = 100
@@ -16,8 +16,8 @@ class ShopItemDef:
     name: str
     description: str
     price: int
-    category: ShopCategory
-    effect: ItemEffect
+    category: game.constants.ShopCategory
+    effect: game.constants.ItemEffect
 
 
 SHOP_ITEMS: tuple[ShopItemDef, ...] = (
@@ -27,8 +27,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
         "Двойной клинок",
         "x2 очка за верный ответ",
         500,
-        ShopCategory.WEAPONS,
-        ItemEffect.DOUBLE_POINTS,
+        game.constants.ShopCategory.WEAPONS,
+        game.constants.ItemEffect.DOUBLE_POINTS,
     ),
     ShopItemDef(
         2,
@@ -36,8 +36,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
         "Щит",
         "Нет штрафа за неверный ответ",
         400,
-        ShopCategory.WEAPONS,
-        ItemEffect.NO_PENALTY,
+        game.constants.ShopCategory.WEAPONS,
+        game.constants.ItemEffect.NO_PENALTY,
     ),
     ShopItemDef(
         3,
@@ -45,8 +45,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
         "Стрела времени",
         f"+{EXTRA_TIME_SECONDS} сек на ответ",
         300,
-        ShopCategory.WEAPONS,
-        ItemEffect.EXTRA_TIME,
+        game.constants.ShopCategory.WEAPONS,
+        game.constants.ItemEffect.EXTRA_TIME,
     ),
     ShopItemDef(
         4,
@@ -54,8 +54,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
         "Хрустальный шар",
         "Показывает подсказку к ответу",
         200,
-        ShopCategory.WEAPONS,
-        ItemEffect.REVEAL_HINT,
+        game.constants.ShopCategory.WEAPONS,
+        game.constants.ItemEffect.REVEAL_HINT,
     ),
     ShopItemDef(
         8,
@@ -63,8 +63,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
         "Алмаз",
         "Любой ответ засчитывается как верный",
         1000,
-        ShopCategory.SCROLLS,
-        ItemEffect.FORCE_CORRECT,
+        game.constants.ShopCategory.SCROLLS,
+        game.constants.ItemEffect.FORCE_CORRECT,
     ),
     ShopItemDef(
         9,
@@ -72,8 +72,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
         "Джокер",
         "Заменяет текущий вопрос на другой",
         600,
-        ShopCategory.ILLUSIONS,
-        ItemEffect.REPLACE_QUESTION,
+        game.constants.ShopCategory.ILLUSIONS,
+        game.constants.ItemEffect.REPLACE_QUESTION,
     ),
     ShopItemDef(
         10,
@@ -81,8 +81,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
         "Зеркало",
         "Штраф переводится на случайного соперника",
         800,
-        ShopCategory.ILLUSIONS,
-        ItemEffect.TRANSFER_PENALTY,
+        game.constants.ShopCategory.ILLUSIONS,
+        game.constants.ItemEffect.TRANSFER_PENALTY,
     ),
     ShopItemDef(
         11,
@@ -90,8 +90,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
         "Песочные часы",
         "Возвращает случайный отыгранный вопрос на табло",
         1000,
-        ShopCategory.ILLUSIONS,
-        ItemEffect.RESURRECT_QUESTION,
+        game.constants.ShopCategory.ILLUSIONS,
+        game.constants.ItemEffect.RESURRECT_QUESTION,
     ),
     ShopItemDef(
         13,
@@ -99,8 +99,8 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
         "Корона",
         f"+{BONUS_START_POINTS} очков сразу",
         800,
-        ShopCategory.TITLES,
-        ItemEffect.BONUS_POINTS,
+        game.constants.ShopCategory.TITLES,
+        game.constants.ItemEffect.BONUS_POINTS,
     ),
     ShopItemDef(
         16,
@@ -108,20 +108,20 @@ SHOP_ITEMS: tuple[ShopItemDef, ...] = (
         "Кольцо власти",
         "Вы выбираете следующий вопрос",
         1200,
-        ShopCategory.TITLES,
-        ItemEffect.BECOME_CHOOSER,
+        game.constants.ShopCategory.TITLES,
+        game.constants.ItemEffect.BECOME_CHOOSER,
     ),
 )
 
 ITEMS_BY_ID: dict[int, ShopItemDef] = {item.id: item for item in SHOP_ITEMS}
 
-ITEMS_BY_CATEGORY: dict[ShopCategory, list[ShopItemDef]] = {}
+ITEMS_BY_CATEGORY: dict[game.constants.ShopCategory, list[ShopItemDef]] = {}
 for _item in SHOP_ITEMS:
     ITEMS_BY_CATEGORY.setdefault(_item.category, []).append(_item)
 
-CATEGORY_LABELS: dict[ShopCategory, str] = {
-    ShopCategory.WEAPONS: "⚔️ Оружие",
-    ShopCategory.SCROLLS: "📜 Свитки",
-    ShopCategory.ILLUSIONS: "🌀 Иллюзии",
-    ShopCategory.TITLES: "🏅 Титулы",
+CATEGORY_LABELS: dict[game.constants.ShopCategory, str] = {
+    game.constants.ShopCategory.WEAPONS: "⚔️ Оружие",
+    game.constants.ShopCategory.SCROLLS: "📜 Свитки",
+    game.constants.ShopCategory.ILLUSIONS: "🌀 Иллюзии",
+    game.constants.ShopCategory.TITLES: "🏅 Титулы",
 }

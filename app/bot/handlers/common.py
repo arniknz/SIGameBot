@@ -31,17 +31,29 @@ def register(
 ) -> None:
 
     @router.command(game.constants.Command.HELP)
-    def cmd_help_group(chat_id: int, bot_username: str = "", **_):
-        return _dm_redirect(chat_id, "\u2753 Справка", bot_username, "help")
+    def cmd_help_group(
+        chat_id: int, bot_username: str = "", **_: object
+    ) -> list[game.schemas.GameResponse]:
+        return _dm_redirect(
+            chat_id,
+            "\u2753 Справка",
+            bot_username,
+            game.constants.StartArg.HELP,
+        )
 
     @router.command(game.constants.Command.RULES)
-    def cmd_rules_group(chat_id: int, bot_username: str = "", **_):
+    def cmd_rules_group(
+        chat_id: int, bot_username: str = "", **_: object
+    ) -> list[game.schemas.GameResponse]:
         return _dm_redirect(
-            chat_id, "\U0001f4d6 Правила", bot_username, "rules"
+            chat_id,
+            "\U0001f4d6 Правила",
+            bot_username,
+            game.constants.StartArg.RULES,
         )
 
     @router.callback(game.constants.Callback.HELP)
-    def cb_help(chat_id: int, **_):
+    def cb_help(chat_id: int, **_: object) -> list[game.schemas.GameResponse]:
         return [
             game.schemas.GameResponse(
                 chat_id=chat_id,
@@ -51,7 +63,7 @@ def register(
         ]
 
     @router.callback(game.constants.Callback.RULES)
-    def cb_rules(chat_id: int, **_):
+    def cb_rules(chat_id: int, **_: object) -> list[game.schemas.GameResponse]:
         return [
             game.schemas.GameResponse(
                 chat_id=chat_id,

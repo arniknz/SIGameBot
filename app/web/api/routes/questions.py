@@ -6,23 +6,27 @@ import typing
 import uuid
 
 import fastapi
+import game.constants
 import game.models
 import sqlalchemy
 import sqlalchemy.ext.asyncio
-from web.api import dependencies, schemas
+import web.api.dependencies
+import web.api.schemas
 
 router = fastapi.APIRouter(prefix="/questions", tags=["Questions"])
 
 
-@router.get("", response_model=list[schemas.QuestionOut])
+@router.get("", response_model=list[web.api.schemas.QuestionOut])
 async def list_questions(
     session: typing.Annotated[
         sqlalchemy.ext.asyncio.AsyncSession,
-        fastapi.Depends(dependencies.get_session),
+        fastapi.Depends(web.api.dependencies.get_session),
     ],
-    _admin: typing.Annotated[str, fastapi.Depends(dependencies.require_admin)],
+    _admin: typing.Annotated[
+        str, fastapi.Depends(web.api.dependencies.require_admin)
+    ],
     topic_id: uuid.UUID | None = None,
-) -> list[schemas.QuestionOut]:
+) -> list[web.api.schemas.QuestionOut]:
     stmt = (
         sqlalchemy.select(
             game.models.QuestionModel,
@@ -39,7 +43,7 @@ async def list_questions(
 
     rows = (await session.execute(stmt)).all()
     return [
-        schemas.QuestionOut(
+        web.api.schemas.QuestionOut(
             id=q.id,
             topic_id=q.topic_id,
             text=q.text,
@@ -54,20 +58,25 @@ async def list_questions(
 
 @router.post(
     "",
-    response_model=schemas.QuestionOut,
+    response_model=web.api.schemas.QuestionOut,
     status_code=201,
 )
 async def create_question(
-    body: schemas.QuestionCreate,
+    body: web.api.schemas.QuestionCreate,
     session: typing.Annotated[
         sqlalchemy.ext.asyncio.AsyncSession,
-        fastapi.Depends(dependencies.get_session),
+        fastapi.Depends(web.api.dependencies.get_session),
     ],
-    _admin: typing.Annotated[str, fastapi.Depends(dependencies.require_admin)],
-) -> schemas.QuestionOut:
+    _admin: typing.Annotated[
+        str, fastapi.Depends(web.api.dependencies.require_admin)
+    ],
+) -> web.api.schemas.QuestionOut:
     topic = await session.get(game.models.TopicModel, body.topic_id)
     if not topic:
-        raise fastapi.HTTPException(status_code=404, detail="Topic not found")
+        raise fastapi.HTTPException(
+            status_code=404,
+            detail=game.constants.API_MSG_TOPIC_NOT_FOUND,
+        )
 
     question = game.models.QuestionModel(
         topic_id=body.topic_id,
@@ -78,7 +87,7 @@ async def create_question(
     session.add(question)
     await session.commit()
     await session.refresh(question)
-    return schemas.QuestionOut(
+    return web.api.schemas.QuestionOut(
         id=question.id,
         topic_id=question.topic_id,
         text=question.text,
@@ -89,27 +98,31 @@ async def create_question(
     )
 
 
-@router.put("/{question_id}", response_model=schemas.QuestionOut)
+@router.put("/{question_id}", response_model=web.api.schemas.QuestionOut)
 async def update_question(
     question_id: uuid.UUID,
-    body: schemas.QuestionUpdate,
+    body: web.api.schemas.QuestionUpdate,
     session: typing.Annotated[
         sqlalchemy.ext.asyncio.AsyncSession,
-        fastapi.Depends(dependencies.get_session),
+        fastapi.Depends(web.api.dependencies.get_session),
     ],
-    _admin: typing.Annotated[str, fastapi.Depends(dependencies.require_admin)],
-) -> schemas.QuestionOut:
+    _admin: typing.Annotated[
+        str, fastapi.Depends(web.api.dependencies.require_admin)
+    ],
+) -> web.api.schemas.QuestionOut:
     question = await session.get(game.models.QuestionModel, question_id)
     if not question:
         raise fastapi.HTTPException(
-            status_code=404, detail="Question not found"
+            status_code=404,
+            detail=game.constants.API_MSG_QUESTION_NOT_FOUND,
         )
 
     if body.topic_id is not None:
         topic = await session.get(game.models.TopicModel, body.topic_id)
         if not topic:
             raise fastapi.HTTPException(
-                status_code=404, detail="Topic not found"
+                status_code=404,
+                detail=game.constants.API_MSG_TOPIC_NOT_FOUND,
             )
         question.topic_id = body.topic_id
 
@@ -124,7 +137,7 @@ async def update_question(
     await session.refresh(question)
 
     topic = await session.get(game.models.TopicModel, question.topic_id)
-    return schemas.QuestionOut(
+    return web.api.schemas.QuestionOut(
         id=question.id,
         topic_id=question.topic_id,
         text=question.text,
@@ -140,14 +153,17 @@ async def delete_question(
     question_id: uuid.UUID,
     session: typing.Annotated[
         sqlalchemy.ext.asyncio.AsyncSession,
-        fastapi.Depends(dependencies.get_session),
+        fastapi.Depends(web.api.dependencies.get_session),
     ],
-    _admin: typing.Annotated[str, fastapi.Depends(dependencies.require_admin)],
+    _admin: typing.Annotated[
+        str, fastapi.Depends(web.api.dependencies.require_admin)
+    ],
 ) -> fastapi.Response:
     question = await session.get(game.models.QuestionModel, question_id)
     if not question:
         raise fastapi.HTTPException(
-            status_code=404, detail="Question not found"
+            status_code=404,
+            detail=game.constants.API_MSG_QUESTION_NOT_FOUND,
         )
 
     qig_ids = [
@@ -188,15 +204,17 @@ async def delete_question(
     return fastapi.Response(status_code=204)
 
 
-@router.post("/bulk", response_model=schemas.BulkImportResult)
+@router.post("/bulk", response_model=web.api.schemas.BulkImportResult)
 async def bulk_import_csv(
     file: fastapi.UploadFile,
     session: typing.Annotated[
         sqlalchemy.ext.asyncio.AsyncSession,
-        fastapi.Depends(dependencies.get_session),
+        fastapi.Depends(web.api.dependencies.get_session),
     ],
-    _admin: typing.Annotated[str, fastapi.Depends(dependencies.require_admin)],
-) -> schemas.BulkImportResult:
+    _admin: typing.Annotated[
+        str, fastapi.Depends(web.api.dependencies.require_admin)
+    ],
+) -> web.api.schemas.BulkImportResult:
     content = (await file.read()).decode("utf-8-sig")
     reader = csv.DictReader(io.StringIO(content))
 
@@ -206,7 +224,9 @@ async def bulk_import_csv(
     ):
         raise fastapi.HTTPException(
             status_code=400,
-            detail=f"CSV must have columns: {', '.join(sorted(required))}",
+            detail=game.constants.API_MSG_CSV_COLUMNS.format(
+                ", ".join(sorted(required))
+            ),
         )
 
     field_map = {f.strip().lower(): f for f in reader.fieldnames}
@@ -259,4 +279,4 @@ async def bulk_import_csv(
         created += 1
 
     await session.commit()
-    return schemas.BulkImportResult(created=created, errors=errors)
+    return web.api.schemas.BulkImportResult(created=created, errors=errors)

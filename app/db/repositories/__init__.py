@@ -1,9 +1,14 @@
 from __future__ import annotations
 
-from db.repositories.game import GameRepository
-from db.repositories.participant import ParticipantRepository
-from db.repositories.question import QuestionRepository
-from db.repositories.user import UserRepository
+import db.repositories.game
+import db.repositories.participant
+import db.repositories.question
+import db.repositories.user
+
+GameRepository = db.repositories.game.GameRepository
+ParticipantRepository = db.repositories.participant.ParticipantRepository
+QuestionRepository = db.repositories.question.QuestionRepository
+UserRepository = db.repositories.user.UserRepository
 
 __all__ = [
     "GameRepository",

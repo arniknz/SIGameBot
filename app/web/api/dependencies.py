@@ -7,6 +7,7 @@ import config
 import db.database
 import fastapi
 import fastapi.security
+import game.constants
 import sqlalchemy.ext.asyncio
 
 _security = fastapi.security.HTTPBasic()
@@ -52,7 +53,7 @@ def require_admin(
     if _state.cfg is None:
         raise fastapi.HTTPException(
             status_code=500,
-            detail="Server misconfigured",
+            detail=game.constants.API_MSG_SERVER_MISCONFIGURED,
         )
 
     username_ok = secrets.compare_digest(
@@ -66,7 +67,7 @@ def require_admin(
     if not (username_ok and password_ok):
         raise fastapi.HTTPException(
             status_code=401,
-            detail="Invalid credentials",
+            detail=game.constants.API_MSG_INVALID_CREDENTIALS,
             headers={"WWW-Authenticate": "Basic"},
         )
     return credentials.username

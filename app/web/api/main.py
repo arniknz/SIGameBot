@@ -6,8 +6,12 @@ import typing
 
 import config
 import fastapi
-from web.api import dependencies, schemas
-from web.api.routes import games, questions, topics, users
+import web.api.dependencies
+import web.api.routes.games
+import web.api.routes.questions
+import web.api.routes.topics
+import web.api.routes.users
+import web.api.schemas
 
 logger = logging.getLogger(__name__)
 
@@ -19,13 +23,13 @@ def _get_config() -> config.Config:
 @contextlib.asynccontextmanager
 async def lifespan(app: fastapi.FastAPI) -> typing.AsyncIterator[None]:
     cfg = _get_config()
-    dependencies.init_auth(cfg)
-    await dependencies.init_db(cfg)
+    web.api.dependencies.init_auth(cfg)
+    await web.api.dependencies.init_db(cfg)
     logger.info("Admin API started on port %s", cfg.admin_api_port)
 
     yield
 
-    await dependencies.close_db()
+    await web.api.dependencies.close_db()
     logger.info("Admin API stopped")
 
 
@@ -39,21 +43,23 @@ app = fastapi.FastAPI(
 )
 
 api_router = fastapi.APIRouter(prefix="/api")
-api_router.include_router(topics.router)
-api_router.include_router(questions.router)
-api_router.include_router(users.router)
-api_router.include_router(games.router)
+api_router.include_router(web.api.routes.topics.router)
+api_router.include_router(web.api.routes.questions.router)
+api_router.include_router(web.api.routes.users.router)
+api_router.include_router(web.api.routes.games.router)
 
 
-@api_router.get("/config", response_model=schemas.ConfigOut, tags=["Config"])
+@api_router.get(
+    "/config", response_model=web.api.schemas.ConfigOut, tags=["Config"]
+)
 async def get_config(
     _admin: typing.Annotated[
         str,
-        fastapi.Depends(dependencies.require_admin),
+        fastapi.Depends(web.api.dependencies.require_admin),
     ],
-) -> schemas.ConfigOut:
+) -> web.api.schemas.ConfigOut:
     cfg = _get_config()
-    return schemas.ConfigOut(
+    return web.api.schemas.ConfigOut(
         question_selection_timeout=cfg.question_selection_timeout,
         buzzer_timeout=cfg.buzzer_timeout,
         answer_timeout=cfg.answer_timeout,

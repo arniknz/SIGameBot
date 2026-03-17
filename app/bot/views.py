@@ -33,12 +33,13 @@ def _make(
 
 def _render_game_created(cid: int, p: _P) -> game.schemas.GameResponse:
     bot_username = p.get("bot_username", "")
+    username = p.get("username", "")
     kb = bot.keyboards.lobby(bot_username)
     return _make(
         cid,
         (
             f"🎲 Игра начинается!\n\n"
-            f"🎮 {p['username']} создал(а) новую игру!\n"
+            f"🎮 {username} создал(а) новую игру!\n"
             "Нажмите «Войти», чтобы играть, или «Смотреть» — "
             "чтобы наблюдать.\n\n"
             f"🕹 Ожидаем игроков..."
@@ -422,11 +423,23 @@ def _render_rules(cid: int, p: _P) -> game.schemas.GameResponse:
 def _render_my_games(cid: int, p: _P) -> game.schemas.GameResponse:
     games = p["games"]
     lines = ["🎮 Ваши активные игры\n"]
-    status_icons = {"waiting": "⏳", "active": "🎯"}
-    status_labels = {"waiting": "Ожидание", "active": "Идёт"}
     for i, g in enumerate(games, 1):
-        icon = status_icons.get(g["status"], "❓")
-        label = status_labels.get(g["status"], str(g["status"]))
+        status_str = g["status"]
+        try:
+            status_enum = game.constants.GameStatus(status_str)
+        except ValueError:
+            status_enum = None
+        default_icon = game.constants.DEFAULT_STATUS_ICON
+        icon = (
+            game.constants.GAME_STATUS_ICON.get(status_enum, default_icon)
+            if status_enum
+            else default_icon
+        )
+        label = (
+            game.constants.GAME_STATUS_LABEL.get(status_enum, status_str)
+            if status_enum
+            else status_str
+        )
         lines.append(
             f"{i}. {icon} {label}"
             f" | 👥 {g['player_count']} игрок(ов)"

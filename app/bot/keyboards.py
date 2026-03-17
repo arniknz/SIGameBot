@@ -13,7 +13,7 @@ def lobby(bot_username: str = "") -> list[list[dict[str, str]]]:
     if bot_username:
         shop_btn = {
             "text": "🛒 Магазин",
-            "url": f"https://t.me/{bot_username}?start=shop",
+            "url": f"https://t.me/{bot_username}?start={game.constants.StartArg.SHOP}",
         }
     else:
         shop_btn = {
@@ -25,11 +25,11 @@ def lobby(bot_username: str = "") -> list[list[dict[str, str]]]:
     if bot_username:
         rules_btn = {
             "text": "\U0001f4d6 Правила",
-            "url": f"https://t.me/{bot_username}?start=rules",
+            "url": f"https://t.me/{bot_username}?start={game.constants.StartArg.RULES}",
         }
         help_btn = {
             "text": "\u2753 Справка",
-            "url": f"https://t.me/{bot_username}?start=help",
+            "url": f"https://t.me/{bot_username}?start={game.constants.StartArg.HELP}",
         }
     else:
         rules_btn = {
@@ -79,7 +79,7 @@ def lobby(bot_username: str = "") -> list[list[dict[str, str]]]:
             [
                 {
                     "text": "\U0001f4e9 Управление в личке",
-                    "url": f"https://t.me/{bot_username}?start=help",
+                    "url": f"https://t.me/{bot_username}?start={game.constants.StartArg.HELP}",
                 }
             ]
         )
@@ -301,7 +301,7 @@ def dm_bot_button(
     return [
         {
             "text": "📩 Управление в личке",
-            "url": f"https://t.me/{bot_username}?start=help",
+            "url": f"https://t.me/{bot_username}?start={game.constants.StartArg.HELP}",
         }
     ]
 
@@ -463,7 +463,7 @@ def shop_redirect_button(
         [
             {
                 "text": "🛒 Открыть магазин",
-                "url": f"https://t.me/{bot_username}?start=shop",
+                "url": f"https://t.me/{bot_username}?start={game.constants.StartArg.SHOP}",
             }
         ]
     ]

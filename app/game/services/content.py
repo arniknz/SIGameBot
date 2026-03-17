@@ -8,19 +8,10 @@ import db.repositories.question
 import db.repositories.user
 import game.constants
 import game.schemas
+import game.utils
 import sqlalchemy.ext.asyncio
 
 logger = logging.getLogger(__name__)
-
-
-def _result(
-    chat_id: int, view: game.constants.ViewName, **payload: object
-) -> game.schemas.ServiceResponse:
-    return game.schemas.ServiceResponse(
-        chat_id=chat_id,
-        view=view,
-        payload=dict(payload),
-    )
 
 
 class ContentService:
@@ -49,7 +40,7 @@ class ContentService:
             existing = await question_repo.get_topic_by_title(topic_name)
             if existing is not None:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="⚠️ Такая тема уже есть.",
@@ -67,7 +58,7 @@ class ContentService:
             )
 
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
                     text=f"✅ Тема «{topic_name}» создана!",
@@ -92,7 +83,7 @@ class ContentService:
                 topic_id = uuid.UUID(topic_id_str)
             except ValueError:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="⚠️ Неверный ID темы.",
@@ -117,7 +108,7 @@ class ContentService:
             )
 
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
                     text=(
@@ -138,7 +129,7 @@ class ContentService:
             topics = await question_repo.all_topics()
             if not topics:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text=(
@@ -148,7 +139,7 @@ class ContentService:
                 ]
 
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.TOPIC_SELECT_FOR_ADD,
                     topics=topics,
@@ -168,7 +159,7 @@ class ContentService:
             )
             if not topics_with_counts:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="📭 Нет тем для удаления.",
@@ -176,7 +167,7 @@ class ContentService:
                 ]
 
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.TOPIC_SELECT_FOR_DELETE,
                     topics_with_counts=topics_with_counts,
@@ -197,7 +188,7 @@ class ContentService:
                 topic_id = uuid.UUID(topic_id_str)
             except ValueError:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="⚠️ Неверный ID темы.",
@@ -207,7 +198,7 @@ class ContentService:
             topic = await question_repo.get_topic_by_id(topic_id)
             if topic is None:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="⚠️ Тема не найдена.",
@@ -217,7 +208,7 @@ class ContentService:
             user = await user_repo.get_by_telegram_id(telegram_id)
             if user is None:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="⚠️ Пользователь не найден.",
@@ -226,7 +217,7 @@ class ContentService:
 
             if topic.created_by is not None and topic.created_by != user.id:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="🚫 Удалять можно только созданные вами темы.",
@@ -242,7 +233,7 @@ class ContentService:
             )
 
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
                     text=(
@@ -265,7 +256,7 @@ class ContentService:
             )
             if not topics_with_counts:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="📭 Нет тем с вопросами для удаления.",
@@ -273,7 +264,7 @@ class ContentService:
                 ]
 
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.TOPIC_SELECT_FOR_DELETE_QUESTION,
                     topics_with_counts=topics_with_counts,
@@ -292,7 +283,7 @@ class ContentService:
                 topic_id = uuid.UUID(topic_id_str)
             except ValueError:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="⚠️ Неверный ID темы.",
@@ -302,7 +293,7 @@ class ContentService:
             questions = await question_repo.get_questions_by_topic(topic_id)
             if not questions:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="📭 В этой теме нет вопросов.",
@@ -310,7 +301,7 @@ class ContentService:
                 ]
 
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.QUESTION_SELECT_FOR_DELETE,
                     questions=questions,
@@ -331,7 +322,7 @@ class ContentService:
                 question_id = uuid.UUID(question_id_str)
             except ValueError:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="⚠️ Неверный ID вопроса.",
@@ -341,7 +332,7 @@ class ContentService:
             question = await question_repo.get_question_by_id(question_id)
             if question is None:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="⚠️ Вопрос не найден.",
@@ -351,7 +342,7 @@ class ContentService:
             user = await user_repo.get_by_telegram_id(telegram_id)
             if user is None:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="⚠️ Пользователь не найден.",
@@ -363,7 +354,7 @@ class ContentService:
                 and question.created_by != user.id
             ):
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="🚫 Удалять можно только созданные вами вопросы.",
@@ -379,7 +370,7 @@ class ContentService:
             )
 
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
                     text=("🗑 Вопрос скрыт. Восстановить: /restore_question"),
@@ -401,7 +392,7 @@ class ContentService:
             user = await user_repo.get_by_telegram_id(telegram_id)
             if user is None:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text=(
@@ -414,7 +405,7 @@ class ContentService:
             hosted = await game_repo.get_hosted_with_player_counts(user.id)
             if not hosted:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="🎮 Нет активных игр, где вы ведущий.",
@@ -436,7 +427,7 @@ class ContentService:
             ]
 
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.MY_GAMES,
                     games=games_payload,
@@ -447,14 +438,16 @@ class ContentService:
         self,
         chat_id: int,
     ) -> list[game.schemas.ServiceResponse]:
-        return [_result(chat_id, game.constants.ViewName.HELP)]
+        return [
+            game.utils.service_result(chat_id, game.constants.ViewName.HELP)
+        ]
 
     async def handle_rules(
         self,
         chat_id: int,
     ) -> list[game.schemas.ServiceResponse]:
         return [
-            _result(
+            game.utils.service_result(
                 chat_id,
                 game.constants.ViewName.RULES,
                 buzzer_timeout=self._buzzer_timeout,
@@ -474,7 +467,7 @@ class ContentService:
             user = await user_repo.get_by_telegram_id(telegram_id)
             if user is None:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="⚠️ Пользователь не найден.",
@@ -484,7 +477,7 @@ class ContentService:
             hidden = await question_repo.hidden_topics_for_user(user.id)
             if not hidden:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="📭 Нет скрытых тем для восстановления.",
@@ -492,7 +485,7 @@ class ContentService:
                 ]
 
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.TOPIC_SELECT_FOR_RESTORE,
                     topics=hidden,
@@ -513,7 +506,7 @@ class ContentService:
                 topic_id = uuid.UUID(topic_id_str)
             except ValueError:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="⚠️ Неверный ID темы.",
@@ -523,7 +516,7 @@ class ContentService:
             topic = await question_repo.get_topic_by_id(topic_id)
             if topic is None:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="⚠️ Тема не найдена.",
@@ -533,7 +526,7 @@ class ContentService:
             user = await user_repo.get_by_telegram_id(telegram_id)
             if user is None:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="⚠️ Пользователь не найден.",
@@ -542,7 +535,7 @@ class ContentService:
 
             if topic.created_by is not None and topic.created_by != user.id:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text=(
@@ -561,7 +554,7 @@ class ContentService:
             )
 
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
                     text=f"✅ Тема «{topic.title}» восстановлена!",
@@ -580,7 +573,7 @@ class ContentService:
             user = await user_repo.get_by_telegram_id(telegram_id)
             if user is None:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="⚠️ Пользователь не найден.",
@@ -590,7 +583,7 @@ class ContentService:
             hidden = await question_repo.hidden_questions_for_user(user.id)
             if not hidden:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="📭 Нет скрытых вопросов для восстановления.",
@@ -598,7 +591,7 @@ class ContentService:
                 ]
 
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.QUESTION_SELECT_FOR_RESTORE,
                     questions=hidden,
@@ -619,7 +612,7 @@ class ContentService:
                 question_id = uuid.UUID(question_id_str)
             except ValueError:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="⚠️ Неверный ID вопроса.",
@@ -629,7 +622,7 @@ class ContentService:
             question = await question_repo.get_question_by_id(question_id)
             if question is None:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="⚠️ Вопрос не найден.",
@@ -639,7 +632,7 @@ class ContentService:
             user = await user_repo.get_by_telegram_id(telegram_id)
             if user is None:
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text="⚠️ Пользователь не найден.",
@@ -651,7 +644,7 @@ class ContentService:
                 and question.created_by != user.id
             ):
                 return [
-                    _result(
+                    game.utils.service_result(
                         chat_id,
                         game.constants.ViewName.PLAIN,
                         text=(
@@ -670,7 +663,7 @@ class ContentService:
             )
 
             return [
-                _result(
+                game.utils.service_result(
                     chat_id,
                     game.constants.ViewName.PLAIN,
                     text="✅ Вопрос восстановлен!",
