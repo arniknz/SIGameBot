@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import typing
 
-import game.models.base
+import game.base
 import sqlalchemy
 import sqlalchemy.orm
 
@@ -13,7 +13,7 @@ if typing.TYPE_CHECKING:
     ParticipantModel = game.models.game.ParticipantModel
 
 
-class UserModel(game.models.base.Base):
+class UserModel(game.base.Base):
     __tablename__ = "users"
 
     id: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(

@@ -54,7 +54,7 @@ class LobbyService:
         roster = await participant_repo.get_roster(
             active_game.id, active_game.host_id
         )
-        return game.utils.servicegame.utils.service_result(
+        return game.utils.service_result(
             chat_id,
             game.constants.ViewName.LOBBY,
             edit_message_id=edit_message_id,

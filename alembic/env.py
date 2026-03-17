@@ -11,11 +11,11 @@ import sqlalchemy.ext.asyncio
 import sqlalchemy.pool
 
 import config
+import game.base
 import game.models
-from game.models.base import Base
 
 cfg = config.Config.from_env()
-target_metadata = Base.metadata
+target_metadata = game.base.Base.metadata
 
 
 def run_migrations_offline() -> None:
