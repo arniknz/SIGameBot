@@ -114,14 +114,14 @@ Open a terminal and clone the repository:
 **HTTPS:**
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/SIGameBot.git
+git clone https://github.com/arniknz/SIGameBot.git
 cd SIGameBot
 ```
 
 **SSH:**
 
 ```bash
-git clone git@github.com:YOUR_USERNAME/SIGameBot.git
+git clone git@github.com:arniknz/SIGameBot.git
 cd SIGameBot
 ```
 
