@@ -83,7 +83,10 @@ class OpenRouterClient:
                     content = choices[0].get("message", {}).get("content")
                     if not content:
                         logger.error(
-                            "OpenRouter returned empty content (model=%s, finish_reason=%s): %s",
+                            (
+                                "OpenRouter returned empty content "
+                                "(model=%s, finish_reason=%s): %s"
+                            ),
                             self.model,
                             choices[0].get("finish_reason"),
                             data,
@@ -99,18 +102,18 @@ class OpenRouterClient:
             return False
 
 
-_backend: OpenRouterClient | None = None
+_state: dict[str, OpenRouterClient | None] = {"backend": None}
 
 
 def set_openrouter_client(client: OpenRouterClient) -> None:
-    global _backend
-    _backend = client
+    _state["backend"] = client
 
 
 def get_openrouter_client() -> OpenRouterClient:
-    if _backend is None:
+    backend = _state["backend"]
+    if backend is None:
         raise RuntimeError(
             "OpenRouter client not initialized; "
             "call set_openrouter_client at startup"
         )
-    return _backend
+    return backend

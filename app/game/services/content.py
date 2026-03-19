@@ -904,7 +904,7 @@ class ContentService:
             user_repo = db.repositories.user.UserRepository(session)
             question_repo = db.repositories.question.QuestionRepository(session)
 
-            user = await user_repo.ensure_exists(telegram_id)
+            await user_repo.ensure_exists(telegram_id)
 
             try:
                 question_id = uuid.UUID(question_id_str)
