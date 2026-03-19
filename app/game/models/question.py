@@ -72,6 +72,12 @@ class QuestionModel(game.base.Base):
         sqlalchemy.Text,
         nullable=False,
     )
+    normalized_answer: sqlalchemy.orm.Mapped[str | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.Text, nullable=True)
+    )
+    answer_embedding: sqlalchemy.orm.Mapped[bytes | None] = (
+        sqlalchemy.orm.mapped_column(sqlalchemy.LargeBinary, nullable=True)
+    )
     cost: sqlalchemy.orm.Mapped[int] = sqlalchemy.orm.mapped_column(
         sqlalchemy.Integer,
         nullable=False,

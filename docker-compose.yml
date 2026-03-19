@@ -30,6 +30,26 @@ services:
       timeout: 5s
       retries: 5
 
+  embedding:
+    build:
+      context: ./services/embedding
+      network: host
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      EMBEDDING_PORT: ${EMBEDDING_PORT:-8001}
+      SENTENCE_TRANSFORMER_MODEL: ${SENTENCE_TRANSFORMER_MODEL:-sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2}
+      USE_FP16: ${USE_FP16:-true}
+      EMBEDDING_CACHE_SIZE: ${EMBEDDING_CACHE_SIZE:-1000}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
   bot:
     build:
       context: .
@@ -41,6 +61,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      embedding:
+        condition: service_healthy
     env_file:
       - .env
     environment:
@@ -48,6 +70,7 @@ services:
       DB_PORT: 5432
       RABBITMQ_HOST: 127.0.0.1
       RABBITMQ_PORT: 5672
+      EMBEDDING_SERVICE_URL: http://127.0.0.1:${EMBEDDING_PORT:-8001}
     volumes:
       - ./logs:/opt/logs
 
@@ -60,12 +83,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      embedding:
+        condition: service_healthy
     env_file:
       - .env
     environment:
       DB_HOST: 127.0.0.1
       DB_PORT: 5432
       ADMIN_API_PORT: ${ADMIN_API_PORT:-8000}
+      EMBEDDING_SERVICE_URL: http://127.0.0.1:${EMBEDDING_PORT:-8001}
     command:
       [
         "uvicorn",

@@ -257,6 +257,39 @@ class GameRepository:
         )
         await self._session.execute(statement)
 
+    async def claim_expired_lobbies(
+        self,
+        lobby_timeout_seconds: int,
+    ) -> list[tuple[game.models.GameModel, game.models.GameStateModel]]:
+        if lobby_timeout_seconds <= 0:
+            return []
+        threshold = datetime.datetime.now(datetime.UTC) - datetime.timedelta(
+            seconds=lobby_timeout_seconds
+        )
+        statement = (
+            sqlalchemy.select(game.models.GameModel)
+            .where(
+                game.models.GameModel.status
+                == game.constants.GameStatus.WAITING,
+                game.models.GameModel.created_at <= threshold,
+            )
+            .with_for_update(skip_locked=True)
+        )
+        games = (await self._session.execute(statement)).scalars().all()
+        results: list[
+            tuple[game.models.GameModel, game.models.GameStateModel]
+        ] = []
+        for g in games:
+            state_stmt = sqlalchemy.select(game.models.GameStateModel).where(
+                game.models.GameStateModel.game_id == g.id,
+            )
+            game_state = (
+                await self._session.execute(state_stmt)
+            ).scalar_one_or_none()
+            if game_state is not None:
+                results.append((g, game_state))
+        return results
+
     async def current_player_username(
         self,
         active_game: game.models.GameModel,

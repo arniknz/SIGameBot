@@ -12,6 +12,9 @@ import game.constants
 logger = logging.getLogger(__name__)
 
 
+GAME_COMMANDS_PREFETCH = 20
+
+
 class Worker:
     def __init__(
         self,
@@ -19,11 +22,13 @@ class Worker:
         rabbitmq: clients.rabbitmq.RabbitMQClient,
         worker_id: int,
         timer_delays_ms: list[int],
+        prefetch_count: int = GAME_COMMANDS_PREFETCH,
     ):
         self._dispatcher = dispatcher
         self._rabbitmq = rabbitmq
         self._id = worker_id
         self._timer_delays_ms = timer_delays_ms
+        self._prefetch_count = prefetch_count
         self._running = False
         self._processing = False
         self._task: asyncio.Task | None = None
@@ -36,7 +41,7 @@ class Worker:
         logger.info("Worker-%d started", self._id)
         queue = await self._rabbitmq.create_consumer(
             clients.rabbitmq.UPDATES_QUEUE,
-            prefetch_count=1,
+            prefetch_count=self._prefetch_count,
         )
         async with queue.iterator() as queue_iter:
             async for message in queue_iter:

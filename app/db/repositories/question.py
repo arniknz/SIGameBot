@@ -113,6 +113,9 @@ class QuestionRepository:
         answer: str,
         cost: int,
         created_by: int | None = None,
+        *,
+        normalized_answer: str | None = None,
+        answer_embedding: bytes | None = None,
     ) -> game.models.QuestionModel:
         question = game.models.QuestionModel(
             topic_id=topic_id,
@@ -120,6 +123,8 @@ class QuestionRepository:
             answer=answer,
             cost=cost,
             created_by=created_by,
+            normalized_answer=normalized_answer,
+            answer_embedding=answer_embedding,
         )
         self._session.add(question)
         await self._session.flush()
@@ -311,6 +316,7 @@ class QuestionRepository:
                 str,
                 str,
                 int,
+                bytes | None,
             ]
         ]
         | None
@@ -322,6 +328,7 @@ class QuestionRepository:
                 game.models.QuestionModel.text,
                 game.models.QuestionModel.answer,
                 game.models.QuestionModel.cost,
+                game.models.QuestionModel.answer_embedding,
             )
             .join(
                 game.models.QuestionModel,

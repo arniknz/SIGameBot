@@ -110,6 +110,34 @@ def _make_rules(content: game.services.ContentService):
     return handler
 
 
+def _make_upload_csv() -> collections.abc.Callable[
+    ..., list[game.schemas.GameResponse]
+]:
+    def handler(
+        chat_id: int, **_: typing.Any
+    ) -> list[game.schemas.GameResponse]:
+        return bot.views.render_many(
+            [
+                game.schemas.ServiceResponse(
+                    chat_id,
+                    game.constants.ViewName.PLAIN,
+                    payload={
+                        "text": (
+                            "📤 Загрузка CSV\n\n"
+                            "Отправьте мне CSV-файл со столбцами:\n"
+                            "  topic, question, answer, cost\n\n"
+                            "Пример строки:\n"
+                            "  География,Столица Франции,Париж,100\n\n"
+                            "📌 Новые темы создадутся автоматически."
+                        ),
+                    },
+                )
+            ]
+        )
+
+    return handler
+
+
 def _make_add_topic(dialog: bot.dialog.DialogManager):
     def handler(telegram_id: int, chat_id: int, **_):
         dialog.start_add_topic(telegram_id, game_chat_id=0)
@@ -172,6 +200,9 @@ def _register_commands(
     )
     router.command(game.constants.Command.RULES, private=True)(
         _make_rules(content)
+    )
+    router.command(game.constants.Command.UPLOAD_CSV, private=True)(
+        _make_upload_csv()
     )
     router.command(game.constants.Command.ADD_TOPIC, private=True)(
         _make_add_topic(dialog)

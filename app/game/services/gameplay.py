@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import datetime
 import logging
 import random
@@ -11,6 +12,7 @@ import db.repositories.participant
 import db.repositories.question
 import db.repositories.shop
 import db.repositories.user
+import game.answer_similarity
 import game.constants
 import game.models
 import game.schemas
@@ -29,11 +31,27 @@ class GameplayService:
         question_selection_timeout: int,
         buzzer_timeout: int,
         answer_timeout: int,
+        answer_similarity_threshold: float,
+        answer_fuzzy_ratio_min: float,
+        sentence_transformer_model: str,
+        max_question_word_overlap: float,
+        max_question_similarity: float,
+        min_answer_similarity: float,
+        enable_phonetic: bool = False,
+        phonetic_threshold: float = 0.6,
     ) -> None:
         self._session_factory = session_factory
         self._question_selection_timeout = question_selection_timeout
         self._buzzer_timeout = buzzer_timeout
         self._answer_timeout = answer_timeout
+        self._answer_similarity_threshold = answer_similarity_threshold
+        self._answer_fuzzy_ratio_min = answer_fuzzy_ratio_min
+        self._sentence_transformer_model = sentence_transformer_model
+        self._max_question_word_overlap = max_question_word_overlap
+        self._max_question_similarity = max_question_similarity
+        self._min_answer_similarity = min_answer_similarity
+        self._enable_phonetic = enable_phonetic
+        self._phonetic_threshold = phonetic_threshold
 
     async def handle_start_game(
         self,
@@ -410,6 +428,7 @@ class GameplayService:
             ctx.question_text,
             _answer,
             ctx.cost,
+            _answer_embedding,
         ) = detail
         ctx.now = datetime.datetime.now(datetime.UTC)
         ctx.question_in_game.status = game.constants.QuestionInGameStatus.ASKED
@@ -492,6 +511,7 @@ class GameplayService:
                 str,
                 str,
                 int,
+                bytes | None,
             ]
         ]
     ):
@@ -706,15 +726,26 @@ class GameplayService:
         (
             a.question_in_game,
             _t,
-            _q,
+            a.question_text,
             a.correct_answer,
             a.original_cost,
+            _answer_embedding,
         ) = a.detail
         a.effective_cost = game_state.cost_override or a.original_cost
         a.is_all_in = game_state.all_in_active
         a.now = datetime.datetime.now(datetime.UTC)
-        a.is_correct = (
-            answer_text.strip().lower() == a.correct_answer.strip().lower()
+        a.is_correct = await asyncio.to_thread(
+            game.answer_similarity.validate_player_answer,
+            answer_text,
+            a.question_text,
+            a.correct_answer,
+            model_name=self._sentence_transformer_model,
+            max_question_word_overlap=self._max_question_word_overlap,
+            max_question_similarity=self._max_question_similarity,
+            min_answer_similarity=self._min_answer_similarity,
+            fuzzy_ratio_min=self._answer_fuzzy_ratio_min,
+            enable_phonetic=self._enable_phonetic,
+            phonetic_threshold=self._phonetic_threshold,
         )
         a.effects = await self._get_active_effects(
             session,

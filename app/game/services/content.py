@@ -1,17 +1,45 @@
 from __future__ import annotations
 
+import asyncio
+import csv
+import io
 import logging
 import uuid
 
+import clients.embedding
 import db.repositories.game
 import db.repositories.question
 import db.repositories.user
+import game.answer_similarity
 import game.constants
+import game.models
 import game.schemas
 import game.utils
+import sqlalchemy
 import sqlalchemy.ext.asyncio
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_csv_row(
+    row: dict[str, str],
+    field_map: dict[str, str],
+    row_num: int,
+) -> tuple[str, str, str, int] | str:
+    topic = row[field_map["topic"]].strip()
+    question = row[field_map["question"]].strip()
+    answer = row[field_map["answer"]].strip()
+    cost_raw = row[field_map["cost"]].strip()
+
+    if not all([topic, question, answer, cost_raw]):
+        return f"Row {row_num}: empty required field"
+    try:
+        cost = int(cost_raw)
+        if cost <= 0:
+            raise ValueError
+    except ValueError:
+        return f"Row {row_num}: cost must be a positive integer"
+    return topic, question, answer, cost
 
 
 class ContentService:
@@ -20,10 +48,14 @@ class ContentService:
         session_factory: sqlalchemy.ext.asyncio.async_sessionmaker,
         buzzer_timeout: int,
         answer_timeout: int,
+        sentence_transformer_model: str,
+        max_csv_rows: int = 1000,
     ) -> None:
         self._session_factory = session_factory
         self._buzzer_timeout = buzzer_timeout
         self._answer_timeout = answer_timeout
+        self._sentence_transformer_model = sentence_transformer_model
+        self._max_csv_rows = max_csv_rows
 
     async def handle_add_topic(
         self,
@@ -90,12 +122,36 @@ class ContentService:
                     )
                 ]
 
+            try:
+                normalized_answer, answer_embedding = await asyncio.to_thread(
+                    game.answer_similarity.build_answer_storage_fields,
+                    answer,
+                    self._sentence_transformer_model,
+                )
+            except (
+                clients.embedding.EmbeddingUnavailableError,
+                RuntimeError,
+            ):
+                logger.exception("Embedding service failed during add_question")
+                return [
+                    game.utils.service_result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text=(
+                            "⚠️ Сервис ответов временно"
+                            " недоступен. Попробуйте позже."
+                        ),
+                    )
+                ]
+
             new_question = await question_repo.create_question(
                 topic_id,
                 text,
                 answer,
                 cost,
                 created_by=user.id if user else None,
+                normalized_answer=normalized_answer,
+                answer_embedding=answer_embedding,
             )
             question_count = await question_repo.question_count_by_topic(
                 topic_id
@@ -597,6 +653,200 @@ class ContentService:
                     questions=hidden,
                 )
             ]
+
+    @staticmethod
+    def _parse_csv_rows(
+        csv_text: str,
+        max_rows: int,
+    ) -> tuple[list[tuple[str, str, str, int]], list[str]] | None:
+        reader = csv.DictReader(io.StringIO(csv_text))
+        required = {"topic", "question", "answer", "cost"}
+        if not reader.fieldnames or not required.issubset(
+            {f.strip().lower() for f in reader.fieldnames}
+        ):
+            return None
+
+        field_map = {f.strip().lower(): f for f in reader.fieldnames}
+        errors: list[str] = []
+        valid: list[tuple[str, str, str, int]] = []
+
+        for i, row in enumerate(reader, start=2):
+            if len(valid) >= max_rows:
+                errors.append(
+                    f"Row {i}: max {max_rows} rows exceeded, "
+                    f"remaining rows skipped"
+                )
+                break
+            parsed = _parse_csv_row(row, field_map, i)
+            if isinstance(parsed, str):
+                errors.append(parsed)
+            else:
+                valid.append(parsed)
+
+        return valid, errors
+
+    async def handle_csv_upload(
+        self,
+        chat_id: int,
+        telegram_id: int,
+        csv_content: bytes,
+    ) -> list[game.schemas.ServiceResponse]:
+        try:
+            text = csv_content.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            return [
+                game.utils.service_result(
+                    chat_id,
+                    game.constants.ViewName.PLAIN,
+                    text="⚠️ Не удалось прочитать файл. Используйте UTF-8.",
+                )
+            ]
+
+        parsed = self._parse_csv_rows(text, self._max_csv_rows)
+        if parsed is None:
+            return [
+                game.utils.service_result(
+                    chat_id,
+                    game.constants.ViewName.PLAIN,
+                    text=(
+                        "⚠️ CSV должен содержать столбцы: "
+                        "topic, question, answer, cost"
+                    ),
+                )
+            ]
+
+        valid_rows, errors = parsed
+
+        if not valid_rows:
+            return [
+                game.utils.service_result(
+                    chat_id,
+                    game.constants.ViewName.PLAIN,
+                    text=(
+                        "⚠️ Нет валидных строк для импорта."
+                        + (
+                            "\n\nОшибки:\n" + "\n".join(errors[:10])
+                            if errors
+                            else ""
+                        )
+                    ),
+                )
+            ]
+
+        db_rows = await self._import_csv_rows(telegram_id, chat_id, valid_rows)
+        if (
+            isinstance(db_rows, list)
+            and db_rows
+            and isinstance(db_rows[0], game.schemas.ServiceResponse)
+        ):
+            return db_rows
+
+        logger.info(
+            "CSV upload by user %s: %d questions imported, %d errors",
+            telegram_id,
+            len(db_rows),
+            len(errors),
+        )
+
+        return [
+            game.utils.service_result(
+                chat_id,
+                game.constants.ViewName.CSV_UPLOAD_RESULT,
+                created=len(db_rows),
+                errors=errors,
+            )
+        ]
+
+    async def _import_csv_rows(
+        self,
+        telegram_id: int,
+        chat_id: int,
+        valid_rows: list[tuple[str, str, str, int]],
+    ) -> list:
+        async with self._session_factory() as session, session.begin():
+            user_repo = db.repositories.user.UserRepository(session)
+            user = await user_repo.get_by_telegram_id(telegram_id)
+
+            topic_cache: dict[str, uuid.UUID] = {}
+            db_rows: list[tuple[uuid.UUID, str, str, int]] = []
+
+            for topic_title, q_text, a_text, cost in valid_rows:
+                tid = await self._resolve_topic(
+                    session,
+                    topic_cache,
+                    topic_title,
+                    user,
+                )
+                db_rows.append((tid, q_text, a_text, cost))
+
+            answers_only = [r[2] for r in db_rows]
+            try:
+                storage_fields = await asyncio.to_thread(
+                    game.answer_similarity.build_many_answer_storage_fields,
+                    answers_only,
+                    self._sentence_transformer_model,
+                )
+            except (
+                clients.embedding.EmbeddingUnavailableError,
+                RuntimeError,
+            ):
+                logger.exception("Embedding service failed during CSV upload")
+                return [
+                    game.utils.service_result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text=(
+                            "⚠️ Сервис ответов временно недоступен. "
+                            "Попробуйте позже."
+                        ),
+                    )
+                ]
+
+            for (topic_id, qtext, a_text, cost), (norm, emb) in zip(
+                db_rows, storage_fields, strict=True
+            ):
+                session.add(
+                    game.models.QuestionModel(
+                        topic_id=topic_id,
+                        text=qtext,
+                        answer=a_text,
+                        cost=cost,
+                        created_by=user.id if user else None,
+                        normalized_answer=norm,
+                        answer_embedding=emb,
+                    )
+                )
+
+        return db_rows
+
+    @staticmethod
+    async def _resolve_topic(
+        session: sqlalchemy.ext.asyncio.AsyncSession,
+        cache: dict[str, uuid.UUID],
+        title: str,
+        user: game.models.UserModel | None,
+    ) -> uuid.UUID:
+        if title in cache:
+            return cache[title]
+        existing = (
+            await session.execute(
+                sqlalchemy.select(game.models.TopicModel).where(
+                    game.models.TopicModel.title == title,
+                )
+            )
+        ).scalar_one_or_none()
+        if existing:
+            cache[title] = existing.id
+            return existing.id
+        created_by = user.id if user and hasattr(user, "id") else None
+        new_topic = game.models.TopicModel(
+            title=title,
+            created_by=created_by,
+        )
+        session.add(new_topic)
+        await session.flush()
+        cache[title] = new_topic.id
+        return new_topic.id
 
     async def confirm_restore_question(
         self,
