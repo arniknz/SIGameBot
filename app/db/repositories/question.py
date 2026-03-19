@@ -115,7 +115,6 @@ class QuestionRepository:
         created_by: int | None = None,
         *,
         normalized_answer: str | None = None,
-        answer_embedding: bytes | None = None,
     ) -> game.models.QuestionModel:
         question = game.models.QuestionModel(
             topic_id=topic_id,
@@ -124,7 +123,6 @@ class QuestionRepository:
             cost=cost,
             created_by=created_by,
             normalized_answer=normalized_answer,
-            answer_embedding=answer_embedding,
         )
         self._session.add(question)
         await self._session.flush()
@@ -316,7 +314,6 @@ class QuestionRepository:
                 str,
                 str,
                 int,
-                bytes | None,
             ]
         ]
         | None
@@ -328,7 +325,6 @@ class QuestionRepository:
                 game.models.QuestionModel.text,
                 game.models.QuestionModel.answer,
                 game.models.QuestionModel.cost,
-                game.models.QuestionModel.answer_embedding,
             )
             .join(
                 game.models.QuestionModel,
@@ -475,3 +471,61 @@ class QuestionRepository:
             )
         )
         return list((await self._session.execute(statement)).all())
+
+    async def topics_by_creator(
+        self,
+        user_id: int,
+    ) -> list[sqlalchemy.Row[tuple[game.models.TopicModel, int]]]:
+        user_q_count = sqlalchemy.func.count(
+            game.models.QuestionModel.id
+        )
+        statement = (
+            sqlalchemy.select(
+                game.models.TopicModel,
+                user_q_count,
+            )
+            .outerjoin(
+                game.models.QuestionModel,
+                sqlalchemy.and_(
+                    game.models.QuestionModel.topic_id
+                    == game.models.TopicModel.id,
+                    game.models.QuestionModel.is_visible.is_(True),
+                    game.models.QuestionModel.created_by == user_id,
+                ),
+            )
+            .where(
+                game.models.TopicModel.is_visible.is_(True),
+            )
+            .group_by(game.models.TopicModel.id)
+            .having(
+                sqlalchemy.or_(
+                    game.models.TopicModel.created_by == user_id,
+                    user_q_count > 0,
+                )
+            )
+            .order_by(game.models.TopicModel.title)
+        )
+        return list((await self._session.execute(statement)).all())
+
+    async def questions_by_creator_in_topic(
+        self,
+        user_id: int,
+        topic_id: uuid.UUID,
+    ) -> tuple[
+        game.models.TopicModel | None,
+        list[game.models.QuestionModel],
+    ]:
+        topic = await self.get_topic_by_id(topic_id)
+        statement = (
+            sqlalchemy.select(game.models.QuestionModel)
+            .where(
+                game.models.QuestionModel.topic_id == topic_id,
+                game.models.QuestionModel.created_by == user_id,
+                game.models.QuestionModel.is_visible.is_(True),
+            )
+            .order_by(game.models.QuestionModel.cost)
+        )
+        questions = list(
+            (await self._session.execute(statement)).scalars().all()
+        )
+        return topic, questions

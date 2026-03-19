@@ -35,28 +35,16 @@ class Config:
     admin_password: str = "admin"
     admin_api_port: int = 8000
 
-    answer_similarity_threshold: float = (
-        game.constants.ANSWER_SIMILARITY_THRESHOLD_DEFAULT
-    )
     answer_fuzzy_ratio_min: float = game.constants.ANSWER_FUZZY_RATIO_DEFAULT
-    sentence_transformer_model: str = (
-        game.constants.SENTENCE_TRANSFORMER_MODEL_DEFAULT
-    )
-    embedding_service_url: str = ""
     max_question_word_overlap: float = (
         game.constants.MAX_QUESTION_WORD_OVERLAP_DEFAULT
     )
-    max_question_similarity: float = (
-        game.constants.MAX_QUESTION_SIMILARITY_DEFAULT
-    )
-    min_answer_similarity: float = game.constants.MIN_ANSWER_SIMILARITY_DEFAULT
+
+    openrouter_api_key: str = ""
+    openrouter_model: str = game.constants.OPENROUTER_MODEL_DEFAULT
 
     lobby_timeout: int = game.constants.LOBBY_TIMEOUT_DEFAULT
-    enable_phonetic: bool = game.constants.ENABLE_PHONETIC_DEFAULT
-    phonetic_threshold: float = game.constants.PHONETIC_THRESHOLD_DEFAULT
     max_csv_rows: int = game.constants.MAX_CSV_ROWS_DEFAULT
-    embedding_cache_size: int = game.constants.EMBEDDING_CACHE_SIZE_DEFAULT
-    use_fp16: bool = game.constants.USE_FP16_DEFAULT
 
     @property
     def db_url(self) -> str:
@@ -103,17 +91,6 @@ class Config:
             admin_username=os.getenv("ADMIN_USERNAME", "admin"),
             admin_password=os.getenv("ADMIN_PASSWORD", "admin"),
             admin_api_port=int(os.getenv("ADMIN_API_PORT", "8000")),
-            answer_similarity_threshold=float(
-                os.getenv(
-                    game.constants.ENV_ANSWER_SIMILARITY_THRESHOLD,
-                    str(game.constants.ANSWER_SIMILARITY_THRESHOLD_DEFAULT),
-                )
-            ),
-            sentence_transformer_model=os.getenv(
-                game.constants.ENV_SENTENCE_TRANSFORMER_MODEL,
-                game.constants.SENTENCE_TRANSFORMER_MODEL_DEFAULT,
-            ),
-            embedding_service_url=os.getenv("EMBEDDING_SERVICE_URL", ""),
             answer_fuzzy_ratio_min=float(
                 os.getenv(
                     game.constants.ENV_ANSWER_FUZZY_RATIO,
@@ -126,32 +103,17 @@ class Config:
                     str(game.constants.MAX_QUESTION_WORD_OVERLAP_DEFAULT),
                 )
             ),
-            max_question_similarity=float(
-                os.getenv(
-                    game.constants.ENV_MAX_QUESTION_SIMILARITY,
-                    str(game.constants.MAX_QUESTION_SIMILARITY_DEFAULT),
-                )
+            openrouter_api_key=os.getenv(
+                game.constants.ENV_OPENROUTER_API_KEY, ""
             ),
-            min_answer_similarity=float(
-                os.getenv(
-                    game.constants.ENV_MIN_ANSWER_SIMILARITY,
-                    str(game.constants.MIN_ANSWER_SIMILARITY_DEFAULT),
-                )
+            openrouter_model=os.getenv(
+                game.constants.ENV_OPENROUTER_MODEL,
+                game.constants.OPENROUTER_MODEL_DEFAULT,
             ),
             lobby_timeout=int(
                 os.getenv(
                     game.constants.ENV_LOBBY_TIMEOUT,
                     str(game.constants.LOBBY_TIMEOUT_DEFAULT),
-                )
-            ),
-            enable_phonetic=os.getenv(
-                game.constants.ENV_ENABLE_PHONETIC, "true"
-            ).lower()
-            in ("true", "1", "yes"),
-            phonetic_threshold=float(
-                os.getenv(
-                    game.constants.ENV_PHONETIC_THRESHOLD,
-                    str(game.constants.PHONETIC_THRESHOLD_DEFAULT),
                 )
             ),
             max_csv_rows=int(
@@ -160,12 +122,4 @@ class Config:
                     str(game.constants.MAX_CSV_ROWS_DEFAULT),
                 )
             ),
-            embedding_cache_size=int(
-                os.getenv(
-                    game.constants.ENV_EMBEDDING_CACHE_SIZE,
-                    str(game.constants.EMBEDDING_CACHE_SIZE_DEFAULT),
-                )
-            ),
-            use_fp16=os.getenv(game.constants.ENV_USE_FP16, "true").lower()
-            in ("true", "1", "yes"),
         )

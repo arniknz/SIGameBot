@@ -40,20 +40,13 @@ class Bot:
             question_selection_timeout=cfg.question_selection_timeout,
             buzzer_timeout=cfg.buzzer_timeout,
             answer_timeout=cfg.answer_timeout,
-            answer_similarity_threshold=cfg.answer_similarity_threshold,
             answer_fuzzy_ratio_min=cfg.answer_fuzzy_ratio_min,
-            sentence_transformer_model=cfg.sentence_transformer_model,
             max_question_word_overlap=cfg.max_question_word_overlap,
-            max_question_similarity=cfg.max_question_similarity,
-            min_answer_similarity=cfg.min_answer_similarity,
-            enable_phonetic=cfg.enable_phonetic,
-            phonetic_threshold=cfg.phonetic_threshold,
         )
         self._content = game.services.ContentService(
             session_factory,
             buzzer_timeout=cfg.buzzer_timeout,
             answer_timeout=cfg.answer_timeout,
-            sentence_transformer_model=cfg.sentence_transformer_model,
             max_csv_rows=cfg.max_csv_rows,
         )
         self._timer = game.services.TimerService(

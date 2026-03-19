@@ -194,7 +194,6 @@ class TimerService:
             _question_text,
             correct_answer,
             _cost,
-            _answer_embedding,
         ) = detail
 
         question_in_game.status = game.constants.QuestionInGameStatus.ANSWERED
@@ -241,7 +240,6 @@ class TimerService:
             _question_text,
             correct_answer,
             original_cost,
-            _answer_embedding,
         ) = detail
 
         effective_cost = game_state.cost_override or original_cost

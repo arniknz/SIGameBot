@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import asyncio
 import csv
 import io
 import logging
 import uuid
 
-import clients.embedding
 import db.repositories.game
 import db.repositories.question
 import db.repositories.user
@@ -48,13 +46,11 @@ class ContentService:
         session_factory: sqlalchemy.ext.asyncio.async_sessionmaker,
         buzzer_timeout: int,
         answer_timeout: int,
-        sentence_transformer_model: str,
         max_csv_rows: int = 1000,
     ) -> None:
         self._session_factory = session_factory
         self._buzzer_timeout = buzzer_timeout
         self._answer_timeout = answer_timeout
-        self._sentence_transformer_model = sentence_transformer_model
         self._max_csv_rows = max_csv_rows
 
     async def handle_add_topic(
@@ -67,7 +63,7 @@ class ContentService:
             question_repo = db.repositories.question.QuestionRepository(session)
 
             user_repo = db.repositories.user.UserRepository(session)
-            user = await user_repo.get_by_telegram_id(telegram_id)
+            user = await user_repo.ensure_exists(telegram_id)
 
             existing = await question_repo.get_topic_by_title(topic_name)
             if existing is not None:
@@ -81,7 +77,7 @@ class ContentService:
 
             new_topic = await question_repo.create_topic(
                 topic_name,
-                created_by=user.id if user else None,
+                created_by=user.id,
             )
             logger.info(
                 "Topic '%s' created (id=%s)",
@@ -109,7 +105,7 @@ class ContentService:
         async with self._session_factory() as session, session.begin():
             question_repo = db.repositories.question.QuestionRepository(session)
             user_repo = db.repositories.user.UserRepository(session)
-            user = await user_repo.get_by_telegram_id(telegram_id)
+            user = await user_repo.ensure_exists(telegram_id)
 
             try:
                 topic_id = uuid.UUID(topic_id_str)
@@ -122,36 +118,17 @@ class ContentService:
                     )
                 ]
 
-            try:
-                normalized_answer, answer_embedding = await asyncio.to_thread(
-                    game.answer_similarity.build_answer_storage_fields,
-                    answer,
-                    self._sentence_transformer_model,
-                )
-            except (
-                clients.embedding.EmbeddingUnavailableError,
-                RuntimeError,
-            ):
-                logger.exception("Embedding service failed during add_question")
-                return [
-                    game.utils.service_result(
-                        chat_id,
-                        game.constants.ViewName.PLAIN,
-                        text=(
-                            "⚠️ Сервис ответов временно"
-                            " недоступен. Попробуйте позже."
-                        ),
-                    )
-                ]
+            normalized_answer = game.answer_similarity.normalize_answer_text(
+                answer
+            )
 
             new_question = await question_repo.create_question(
                 topic_id,
                 text,
                 answer,
                 cost,
-                created_by=user.id if user else None,
+                created_by=user.id,
                 normalized_answer=normalized_answer,
-                answer_embedding=answer_embedding,
             )
             question_count = await question_repo.question_count_by_topic(
                 topic_id
@@ -261,15 +238,7 @@ class ContentService:
                     )
                 ]
 
-            user = await user_repo.get_by_telegram_id(telegram_id)
-            if user is None:
-                return [
-                    game.utils.service_result(
-                        chat_id,
-                        game.constants.ViewName.PLAIN,
-                        text="⚠️ Пользователь не найден.",
-                    )
-                ]
+            user = await user_repo.ensure_exists(telegram_id)
 
             if topic.created_by is not None and topic.created_by != user.id:
                 return [
@@ -395,15 +364,7 @@ class ContentService:
                     )
                 ]
 
-            user = await user_repo.get_by_telegram_id(telegram_id)
-            if user is None:
-                return [
-                    game.utils.service_result(
-                        chat_id,
-                        game.constants.ViewName.PLAIN,
-                        text="⚠️ Пользователь не найден.",
-                    )
-                ]
+            user = await user_repo.ensure_exists(telegram_id)
 
             if (
                 question.created_by is not None
@@ -445,18 +406,7 @@ class ContentService:
             user_repo = db.repositories.user.UserRepository(session)
             game_repo = db.repositories.game.GameRepository(session)
 
-            user = await user_repo.get_by_telegram_id(telegram_id)
-            if user is None:
-                return [
-                    game.utils.service_result(
-                        chat_id,
-                        game.constants.ViewName.PLAIN,
-                        text=(
-                            "🎮 Игр пока нет. Добавьте меня в группу "
-                            "и напишите /start!"
-                        ),
-                    )
-                ]
+            user = await user_repo.ensure_exists(telegram_id)
 
             hosted = await game_repo.get_hosted_with_player_counts(user.id)
             if not hosted:
@@ -520,15 +470,7 @@ class ContentService:
             question_repo = db.repositories.question.QuestionRepository(session)
             user_repo = db.repositories.user.UserRepository(session)
 
-            user = await user_repo.get_by_telegram_id(telegram_id)
-            if user is None:
-                return [
-                    game.utils.service_result(
-                        chat_id,
-                        game.constants.ViewName.PLAIN,
-                        text="⚠️ Пользователь не найден.",
-                    )
-                ]
+            user = await user_repo.ensure_exists(telegram_id)
 
             hidden = await question_repo.hidden_topics_for_user(user.id)
             if not hidden:
@@ -579,15 +521,7 @@ class ContentService:
                     )
                 ]
 
-            user = await user_repo.get_by_telegram_id(telegram_id)
-            if user is None:
-                return [
-                    game.utils.service_result(
-                        chat_id,
-                        game.constants.ViewName.PLAIN,
-                        text="⚠️ Пользователь не найден.",
-                    )
-                ]
+            user = await user_repo.ensure_exists(telegram_id)
 
             if topic.created_by is not None and topic.created_by != user.id:
                 return [
@@ -626,15 +560,7 @@ class ContentService:
             question_repo = db.repositories.question.QuestionRepository(session)
             user_repo = db.repositories.user.UserRepository(session)
 
-            user = await user_repo.get_by_telegram_id(telegram_id)
-            if user is None:
-                return [
-                    game.utils.service_result(
-                        chat_id,
-                        game.constants.ViewName.PLAIN,
-                        text="⚠️ Пользователь не найден.",
-                    )
-                ]
+            user = await user_repo.ensure_exists(telegram_id)
 
             hidden = await question_repo.hidden_questions_for_user(user.id)
             if not hidden:
@@ -765,7 +691,7 @@ class ContentService:
     ) -> list:
         async with self._session_factory() as session, session.begin():
             user_repo = db.repositories.user.UserRepository(session)
-            user = await user_repo.get_by_telegram_id(telegram_id)
+            user = await user_repo.ensure_exists(telegram_id)
 
             topic_cache: dict[str, uuid.UUID] = {}
             db_rows: list[tuple[uuid.UUID, str, str, int]] = []
@@ -779,41 +705,17 @@ class ContentService:
                 )
                 db_rows.append((tid, q_text, a_text, cost))
 
-            answers_only = [r[2] for r in db_rows]
-            try:
-                storage_fields = await asyncio.to_thread(
-                    game.answer_similarity.build_many_answer_storage_fields,
-                    answers_only,
-                    self._sentence_transformer_model,
-                )
-            except (
-                clients.embedding.EmbeddingUnavailableError,
-                RuntimeError,
-            ):
-                logger.exception("Embedding service failed during CSV upload")
-                return [
-                    game.utils.service_result(
-                        chat_id,
-                        game.constants.ViewName.PLAIN,
-                        text=(
-                            "⚠️ Сервис ответов временно недоступен. "
-                            "Попробуйте позже."
-                        ),
-                    )
-                ]
-
-            for (topic_id, qtext, a_text, cost), (norm, emb) in zip(
-                db_rows, storage_fields, strict=True
-            ):
+            for topic_id, qtext, a_text, cost in db_rows:
                 session.add(
                     game.models.QuestionModel(
                         topic_id=topic_id,
                         text=qtext,
                         answer=a_text,
                         cost=cost,
-                        created_by=user.id if user else None,
-                        normalized_answer=norm,
-                        answer_embedding=emb,
+                        created_by=user.id,
+                        normalized_answer=game.answer_similarity.normalize_answer_text(
+                            a_text
+                        ),
                     )
                 )
 
@@ -838,10 +740,9 @@ class ContentService:
         if existing:
             cache[title] = existing.id
             return existing.id
-        created_by = user.id if user and hasattr(user, "id") else None
         new_topic = game.models.TopicModel(
             title=title,
-            created_by=created_by,
+            created_by=user.id if user is not None else None,
         )
         session.add(new_topic)
         await session.flush()
@@ -879,15 +780,7 @@ class ContentService:
                     )
                 ]
 
-            user = await user_repo.get_by_telegram_id(telegram_id)
-            if user is None:
-                return [
-                    game.utils.service_result(
-                        chat_id,
-                        game.constants.ViewName.PLAIN,
-                        text="⚠️ Пользователь не найден.",
-                    )
-                ]
+            user = await user_repo.ensure_exists(telegram_id)
 
             if (
                 question.created_by is not None
@@ -917,5 +810,133 @@ class ContentService:
                     chat_id,
                     game.constants.ViewName.PLAIN,
                     text="✅ Вопрос восстановлен!",
+                )
+            ]
+
+    async def handle_my_content(
+        self,
+        chat_id: int,
+        telegram_id: int,
+    ) -> list[game.schemas.ServiceResponse]:
+        async with self._session_factory() as session, session.begin():
+            user_repo = db.repositories.user.UserRepository(session)
+            question_repo = db.repositories.question.QuestionRepository(session)
+
+            user = await user_repo.ensure_exists(telegram_id)
+
+            topics = await question_repo.topics_by_creator(user.id)
+            if not topics:
+                return [
+                    game.utils.service_result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text=(
+                            "📭 У вас пока нет тем. "
+                            "Создайте тему: /add_topic <название>"
+                        ),
+                    )
+                ]
+
+            return [
+                game.utils.service_result(
+                    chat_id,
+                    game.constants.ViewName.MY_CONTENT_TOPICS,
+                    topics_with_counts=topics,
+                )
+            ]
+
+    async def handle_my_content_topic(
+        self,
+        chat_id: int,
+        telegram_id: int,
+        topic_id_str: str,
+    ) -> list[game.schemas.ServiceResponse]:
+        async with self._session_factory() as session, session.begin():
+            user_repo = db.repositories.user.UserRepository(session)
+            question_repo = db.repositories.question.QuestionRepository(session)
+
+            user = await user_repo.ensure_exists(telegram_id)
+
+            try:
+                topic_id = uuid.UUID(topic_id_str)
+            except ValueError:
+                return [
+                    game.utils.service_result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="⚠️ Неверный ID темы.",
+                    )
+                ]
+
+            topic, questions = (
+                await question_repo.questions_by_creator_in_topic(
+                    user.id, topic_id
+                )
+            )
+
+            if topic is None:
+                return [
+                    game.utils.service_result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="⚠️ Тема не найдена.",
+                    )
+                ]
+
+            return [
+                game.utils.service_result(
+                    chat_id,
+                    game.constants.ViewName.MY_CONTENT_QUESTIONS,
+                    topic_title=topic.title,
+                    topic_id=str(topic.id),
+                    questions=questions,
+                )
+            ]
+
+    async def handle_my_content_question(
+        self,
+        chat_id: int,
+        telegram_id: int,
+        question_id_str: str,
+    ) -> list[game.schemas.ServiceResponse]:
+        async with self._session_factory() as session, session.begin():
+            user_repo = db.repositories.user.UserRepository(session)
+            question_repo = db.repositories.question.QuestionRepository(session)
+
+            user = await user_repo.ensure_exists(telegram_id)
+
+            try:
+                question_id = uuid.UUID(question_id_str)
+            except ValueError:
+                return [
+                    game.utils.service_result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="⚠️ Неверный ID вопроса.",
+                    )
+                ]
+
+            question = await question_repo.get_question_by_id(question_id)
+            if question is None:
+                return [
+                    game.utils.service_result(
+                        chat_id,
+                        game.constants.ViewName.PLAIN,
+                        text="⚠️ Вопрос не найден.",
+                    )
+                ]
+
+            topic = await question_repo.get_topic_by_id(question.topic_id)
+            topic_title = topic.title if topic else "?"
+
+            return [
+                game.utils.service_result(
+                    chat_id,
+                    game.constants.ViewName.MY_CONTENT_QUESTION_DETAIL,
+                    topic_title=topic_title,
+                    topic_id=str(question.topic_id),
+                    question_text=question.text,
+                    question_answer=question.answer,
+                    question_cost=question.cost,
                 )
             ]

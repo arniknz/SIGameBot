@@ -5,8 +5,8 @@ import os
 import signal
 
 import bot.base
-import clients.embedding
 import config
+import nlp.openrouter
 
 
 def setup_logging(cfg: config.Config) -> None:
@@ -55,17 +55,14 @@ async def main() -> None:
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, _shutdown, sig)
 
-    if not cfg.embedding_service_url:
-        raise RuntimeError("EMBEDDING_SERVICE_URL must be set in environment")
-    clients.embedding.set_embedding_backend(cfg.embedding_service_url)
-    try:
-        await asyncio.to_thread(
-            clients.embedding.get_embedding_backend().check_health,
+    if not cfg.openrouter_api_key:
+        raise RuntimeError("OPENROUTER_API_KEY must be set in environment")
+    nlp.openrouter.set_openrouter_client(
+        nlp.openrouter.OpenRouterClient(
+            api_key=cfg.openrouter_api_key,
+            model=cfg.openrouter_model,
         )
-    except clients.embedding.EmbeddingUnavailableError as e:
-        raise RuntimeError(
-            f"Cannot reach embedding service. Is it running? {e}"
-        ) from e
+    )
     await new_bot.start()
     logger.info("Bot is running. Press Ctrl+C to stop.")
     await stop_event.wait()

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import logging
 import typing
 
-import clients.embedding
 import config
 import fastapi
+import nlp.openrouter
 import web.api.dependencies
 import web.api.routes.games
 import web.api.routes.questions
@@ -27,17 +26,14 @@ async def lifespan(app: fastapi.FastAPI) -> typing.AsyncIterator[None]:
     cfg = _get_config()
     web.api.dependencies.init_auth(cfg)
     await web.api.dependencies.init_db(cfg)
-    if not cfg.embedding_service_url:
-        raise RuntimeError("EMBEDDING_SERVICE_URL must be set in environment")
-    clients.embedding.set_embedding_backend(cfg.embedding_service_url)
-    try:
-        await asyncio.to_thread(
-            clients.embedding.get_embedding_backend().check_health,
+    if not cfg.openrouter_api_key:
+        raise RuntimeError("OPENROUTER_API_KEY must be set in environment")
+    nlp.openrouter.set_openrouter_client(
+        nlp.openrouter.OpenRouterClient(
+            api_key=cfg.openrouter_api_key,
+            model=cfg.openrouter_model,
         )
-    except clients.embedding.EmbeddingUnavailableError as e:
-        raise RuntimeError(
-            f"Cannot reach embedding service. Is it running? {e}"
-        ) from e
+    )
     logger.info("Admin API started on port %s", cfg.admin_api_port)
 
     yield

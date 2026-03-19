@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-import asyncio
 import csv
 import io
 import typing
 import uuid
 
-import clients.embedding
-import config
 import fastapi
 import game.answer_similarity
 import game.constants
@@ -74,9 +71,6 @@ async def create_question(
     _admin: typing.Annotated[
         str, fastapi.Depends(web.api.dependencies.require_admin)
     ],
-    cfg: typing.Annotated[
-        config.Config, fastapi.Depends(web.api.dependencies.get_config)
-    ],
 ) -> web.api.schemas.QuestionOut:
     topic = await session.get(game.models.TopicModel, body.topic_id)
     if not topic:
@@ -84,24 +78,15 @@ async def create_question(
             status_code=404,
             detail=game.constants.API_MSG_TOPIC_NOT_FOUND,
         )
-    try:
-        normalized_answer, answer_embedding = await asyncio.to_thread(
-            game.answer_similarity.build_answer_storage_fields,
-            body.answer,
-            cfg.sentence_transformer_model,
-        )
-    except (clients.embedding.EmbeddingUnavailableError, RuntimeError) as e:
-        raise fastapi.HTTPException(
-            status_code=503,
-            detail=f"Embedding service unavailable: {e}",
-        ) from e
+    normalized_answer = game.answer_similarity.normalize_answer_text(
+        body.answer
+    )
     question = game.models.QuestionModel(
         topic_id=body.topic_id,
         text=body.text,
         answer=body.answer,
         cost=body.cost,
         normalized_answer=normalized_answer,
-        answer_embedding=answer_embedding,
     )
     session.add(question)
     await session.commit()
@@ -128,9 +113,6 @@ async def update_question(
     _admin: typing.Annotated[
         str, fastapi.Depends(web.api.dependencies.require_admin)
     ],
-    cfg: typing.Annotated[
-        config.Config, fastapi.Depends(web.api.dependencies.get_config)
-    ],
 ) -> web.api.schemas.QuestionOut:
     question = await session.get(game.models.QuestionModel, question_id)
     if not question:
@@ -152,19 +134,9 @@ async def update_question(
         question.text = body.text
     if body.answer is not None:
         question.answer = body.answer
-        try:
-            normalized_answer, answer_embedding = await asyncio.to_thread(
-                game.answer_similarity.build_answer_storage_fields,
-                body.answer,
-                cfg.sentence_transformer_model,
-            )
-        except (clients.embedding.EmbeddingUnavailableError, RuntimeError) as e:
-            raise fastapi.HTTPException(
-                status_code=503,
-                detail=f"Embedding service unavailable: {e}",
-            ) from e
-        question.normalized_answer = normalized_answer
-        question.answer_embedding = answer_embedding
+        question.normalized_answer = game.answer_similarity.normalize_answer_text(
+            body.answer
+        )
     if body.cost is not None:
         question.cost = body.cost
 
@@ -270,9 +242,6 @@ async def bulk_import_csv(
     _admin: typing.Annotated[
         str, fastapi.Depends(web.api.dependencies.require_admin)
     ],
-    cfg: typing.Annotated[
-        config.Config, fastapi.Depends(web.api.dependencies.get_config)
-    ],
 ) -> web.api.schemas.BulkImportResult:
     content = (await file.read()).decode("utf-8-sig")
     reader = csv.DictReader(io.StringIO(content))
@@ -309,35 +278,18 @@ async def bulk_import_csv(
             (topic_cache[topic_title], question_text, answer_text, cost)
         )
 
-    if valid_rows:
-        answers_only = [r[2] for r in valid_rows]
-        try:
-            storage_fields = await asyncio.to_thread(
-                game.answer_similarity.build_many_answer_storage_fields,
-                answers_only,
-                cfg.sentence_transformer_model,
+    for topic_id, qtext, answer_text, cost in valid_rows:
+        session.add(
+            game.models.QuestionModel(
+                topic_id=topic_id,
+                text=qtext,
+                answer=answer_text,
+                cost=cost,
+                normalized_answer=game.answer_similarity.normalize_answer_text(
+                    answer_text
+                ),
             )
-        except (
-            clients.embedding.EmbeddingUnavailableError,
-            RuntimeError,
-        ) as e:
-            raise fastapi.HTTPException(
-                status_code=503,
-                detail=f"Embedding service unavailable: {e}",
-            ) from e
-        for (topic_id, qtext, answer_text, cost), (norm, emb) in zip(
-            valid_rows, storage_fields, strict=True
-        ):
-            session.add(
-                game.models.QuestionModel(
-                    topic_id=topic_id,
-                    text=qtext,
-                    answer=answer_text,
-                    cost=cost,
-                    normalized_answer=norm,
-                    answer_embedding=emb,
-                )
-            )
+        )
 
     await session.commit()
     return web.api.schemas.BulkImportResult(
