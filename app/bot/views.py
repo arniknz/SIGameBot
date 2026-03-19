@@ -629,18 +629,14 @@ def _render_my_content_topics(cid: int, p: _P) -> game.schemas.GameResponse:
     )
 
 
-def _render_my_content_questions(
-    cid: int, p: _P
-) -> game.schemas.GameResponse:
+def _render_my_content_questions(cid: int, p: _P) -> game.schemas.GameResponse:
     topic_title = p["topic_title"]
     questions = p["questions"]
     if not questions:
         return _make(
             cid,
             f"📂 Тема «{topic_title}»\n\n📭 У вас нет вопросов в этой теме.",
-            keyboard=bot.keyboards.my_content_questions(
-                [], p["topic_id"]
-            ),
+            keyboard=bot.keyboards.my_content_questions([], p["topic_id"]),
         )
     lines = [
         f"📂 Тема «{topic_title}» — {len(questions)} вопросов\n",
@@ -649,9 +645,7 @@ def _render_my_content_questions(
     return _make(
         cid,
         "\n".join(lines),
-        keyboard=bot.keyboards.my_content_questions(
-            questions, p["topic_id"]
-        ),
+        keyboard=bot.keyboards.my_content_questions(questions, p["topic_id"]),
     )
 
 

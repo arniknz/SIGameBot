@@ -134,8 +134,8 @@ async def update_question(
         question.text = body.text
     if body.answer is not None:
         question.answer = body.answer
-        question.normalized_answer = game.answer_similarity.normalize_answer_text(
-            body.answer
+        question.normalized_answer = (
+            game.answer_similarity.normalize_answer_text(body.answer)
         )
     if body.cost is not None:
         question.cost = body.cost

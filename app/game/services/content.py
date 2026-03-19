@@ -868,10 +868,11 @@ class ContentService:
                     )
                 ]
 
-            topic, questions = (
-                await question_repo.questions_by_creator_in_topic(
-                    user.id, topic_id
-                )
+            (
+                topic,
+                questions,
+            ) = await question_repo.questions_by_creator_in_topic(
+                user.id, topic_id
             )
 
             if topic is None:

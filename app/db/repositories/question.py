@@ -476,9 +476,7 @@ class QuestionRepository:
         self,
         user_id: int,
     ) -> list[sqlalchemy.Row[tuple[game.models.TopicModel, int]]]:
-        user_q_count = sqlalchemy.func.count(
-            game.models.QuestionModel.id
-        )
+        user_q_count = sqlalchemy.func.count(game.models.QuestionModel.id)
         statement = (
             sqlalchemy.select(
                 game.models.TopicModel,
