@@ -198,6 +198,19 @@ class TgClient:
             payload["show_alert"] = True
         return await self._post("answerCallbackQuery", payload)
 
+    async def get_file_path(self, file_id: str) -> str:
+        result = await self._request("getFile", file_id=file_id)
+        return result.get("file_path", "")
+
+    async def download_file(self, file_path: str) -> bytes:
+        url = f"https://api.telegram.org/file/bot{self._token}/{file_path}"
+        async with self.session.get(url) as resp:
+            if resp.status != 200:
+                raise RuntimeError(
+                    f"Failed to download file: HTTP {resp.status}"
+                )
+            return await resp.read()
+
     async def close(self) -> None:
         if self._session and not self._session.closed:
             await self._session.close()

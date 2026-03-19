@@ -119,6 +119,8 @@ class Command(enum.StrEnum):
     BALANCE = "balance"
     HELP = "help"
     RULES = "rules"
+    UPLOAD_CSV = "upload_csv"
+    MY_CONTENT = "my_content"
     DONE = "done"
     CANCEL = "cancel"
 
@@ -152,6 +154,9 @@ class CallbackPrefix(enum.StrEnum):
     SHOP_CATEGORY = "shop_cat"
     SHOP_BUY = "buy"
     INV_USE = "inv_use"
+    MC_TOPIC = "mc_topic"
+    MC_QUESTION = "mc_q"
+    MC_BACK = "mc_back"
 
 
 class DialogStep(enum.StrEnum):
@@ -227,6 +232,12 @@ class ViewName(enum.StrEnum):
     GAME_ENDED_AFK = "game_ended_afk"
     LOBBY = "lobby"
     ANSWER_PROMPT = "answer_prompt"
+    LOBBY_CANCELLED = "lobby_cancelled"
+    CSV_UPLOAD_RESULT = "csv_upload_result"
+    CSV_UPLOAD_PREVIEW = "csv_upload_preview"
+    MY_CONTENT_TOPICS = "my_content_topics"
+    MY_CONTENT_QUESTIONS = "my_content_questions"
+    MY_CONTENT_QUESTION_DETAIL = "my_content_question_detail"
 
 
 GAME_STATUS_ICON: dict[GameStatus, str] = {
@@ -249,3 +260,19 @@ API_MSG_TOPIC_ALREADY_EXISTS = "Topic '{}' already exists"
 API_MSG_CSV_COLUMNS = "CSV must have columns: {}"
 
 TIMER_CHECK_BODY = '{"type":"timer_check"}'
+
+ANSWER_FUZZY_RATIO_DEFAULT = 0.76
+ENV_ANSWER_FUZZY_RATIO = "ANSWER_FUZZY_RATIO"
+
+MAX_QUESTION_WORD_OVERLAP_DEFAULT = 0.4
+ENV_MAX_QUESTION_WORD_OVERLAP = "MAX_QUESTION_WORD_OVERLAP"
+
+OPENROUTER_MODEL_DEFAULT = "openai/gpt-oss-20b:free"
+ENV_OPENROUTER_API_KEY = "OPENROUTER_API_KEY"
+ENV_OPENROUTER_MODEL = "OPENROUTER_MODEL"
+
+LOBBY_TIMEOUT_DEFAULT = 3600
+ENV_LOBBY_TIMEOUT = "LOBBY_TIMEOUT"
+
+MAX_CSV_ROWS_DEFAULT = 1000
+ENV_MAX_CSV_ROWS = "MAX_CSV_ROWS"

@@ -23,10 +23,12 @@ class TimerService:
         session_factory: sqlalchemy.ext.asyncio.async_sessionmaker,
         question_selection_timeout: int = 30,
         max_failed_selections: int = 3,
+        lobby_timeout: int = 3600,
     ) -> None:
         self._session_factory = session_factory
         self._question_selection_timeout = question_selection_timeout
         self._max_failed_selections = max_failed_selections
+        self._lobby_timeout = lobby_timeout
         self._recovery_counter = 0
 
     async def check_timers(
@@ -56,6 +58,9 @@ class TimerService:
             self._recovery_counter = 0
             recovery_responses = await self._recover_stale_games()
             responses.extend(recovery_responses)
+
+        lobby_responses = await self._cancel_expired_lobbies()
+        responses.extend(lobby_responses)
 
         return responses
 
@@ -361,6 +366,39 @@ class TimerService:
                 with_controls=False,
             )
         ]
+
+    async def _cancel_expired_lobbies(
+        self,
+    ) -> list[game.schemas.ServiceResponse]:
+        if self._lobby_timeout <= 0:
+            return []
+        responses: list[game.schemas.ServiceResponse] = []
+        async with self._session_factory() as session, session.begin():
+            game_repo = db.repositories.game.GameRepository(session)
+            expired = await game_repo.claim_expired_lobbies(self._lobby_timeout)
+            for active_game, game_state in expired:
+                active_game.status = game.constants.GameStatus.FINISHED
+                active_game.finished_at = datetime.datetime.now(datetime.UTC)
+                game_state.status = game.constants.GamePhase.FINISHED
+                game_state.timer_ends_at = None
+
+                edit_msg_id = game_state.lobby_message_id
+
+                logger.info(
+                    "Lobby for game %s in chat %s cancelled (timeout %ds)",
+                    active_game.id,
+                    active_game.chat_id,
+                    self._lobby_timeout,
+                )
+
+                responses.append(
+                    game.utils.service_result(
+                        active_game.chat_id,
+                        game.constants.ViewName.LOBBY_CANCELLED,
+                        edit_message_id=edit_msg_id,
+                    )
+                )
+        return responses
 
     async def _recover_stale_games(
         self,

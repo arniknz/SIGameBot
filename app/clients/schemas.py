@@ -17,6 +17,14 @@ class User(pydantic.BaseModel):
     username: str | None = None
 
 
+class Document(pydantic.BaseModel):
+    file_id: str
+    file_unique_id: str
+    file_name: str | None = None
+    mime_type: str | None = None
+    file_size: int | None = None
+
+
 class Message(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(populate_by_name=True)
 
@@ -25,6 +33,8 @@ class Message(pydantic.BaseModel):
     date: int
     from_user: User | None = pydantic.Field(None, alias="from")
     text: str | None = None
+    document: Document | None = None
+    caption: str | None = None
 
 
 class CallbackQuery(pydantic.BaseModel):

@@ -11,6 +11,7 @@ import db.repositories.participant
 import db.repositories.question
 import db.repositories.shop
 import db.repositories.user
+import game.answer_similarity
 import game.constants
 import game.models
 import game.schemas
@@ -29,11 +30,15 @@ class GameplayService:
         question_selection_timeout: int,
         buzzer_timeout: int,
         answer_timeout: int,
+        answer_fuzzy_ratio_min: float,
+        max_question_word_overlap: float,
     ) -> None:
         self._session_factory = session_factory
         self._question_selection_timeout = question_selection_timeout
         self._buzzer_timeout = buzzer_timeout
         self._answer_timeout = answer_timeout
+        self._answer_fuzzy_ratio_min = answer_fuzzy_ratio_min
+        self._max_question_word_overlap = max_question_word_overlap
 
     async def handle_start_game(
         self,
@@ -706,15 +711,19 @@ class GameplayService:
         (
             a.question_in_game,
             _t,
-            _q,
+            a.question_text,
             a.correct_answer,
             a.original_cost,
         ) = a.detail
         a.effective_cost = game_state.cost_override or a.original_cost
         a.is_all_in = game_state.all_in_active
         a.now = datetime.datetime.now(datetime.UTC)
-        a.is_correct = (
-            answer_text.strip().lower() == a.correct_answer.strip().lower()
+        a.is_correct = await game.answer_similarity.validate_player_answer(
+            answer_text,
+            a.question_text,
+            a.correct_answer,
+            max_question_word_overlap=self._max_question_word_overlap,
+            fuzzy_ratio_min=self._answer_fuzzy_ratio_min,
         )
         a.effects = await self._get_active_effects(
             session,

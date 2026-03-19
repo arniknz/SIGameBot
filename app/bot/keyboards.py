@@ -495,3 +495,72 @@ def inventory_items(
         ]
     )
     return kb
+
+
+def my_content_topics(
+    topics_with_counts: list[
+        sqlalchemy.Row[tuple[game.models.TopicModel, int]]
+    ],
+) -> list[list[dict[str, str]]]:
+    kb: list[list[dict[str, str]]] = []
+    for topic, count in topics_with_counts:
+        kb.append(
+            [
+                {
+                    "text": f"📂 {topic.title} ({count} вопр.)",
+                    "callback_data": (
+                        f"{game.constants.CallbackPrefix.MC_TOPIC}:{topic.id}"
+                    ),
+                }
+            ]
+        )
+    return kb
+
+
+def my_content_questions(
+    questions: list[game.models.QuestionModel],
+    topic_id: str,
+) -> list[list[dict[str, str]]]:
+    kb: list[list[dict[str, str]]] = []
+    for q in questions:
+        label = q.text[:40] + "…" if len(q.text) > 40 else q.text
+        kb.append(
+            [
+                {
+                    "text": f"❓ {label} ({q.cost})",
+                    "callback_data": (
+                        f"{game.constants.CallbackPrefix.MC_QUESTION}:{q.id}"
+                    ),
+                }
+            ]
+        )
+    kb.append(
+        [
+            {
+                "text": "◀️ К темам",
+                "callback_data": game.constants.CallbackPrefix.MC_BACK,
+            }
+        ]
+    )
+    return kb
+
+
+def my_content_question_back(
+    topic_id: str,
+) -> list[list[dict[str, str]]]:
+    return [
+        [
+            {
+                "text": "◀️ К вопросам",
+                "callback_data": (
+                    f"{game.constants.CallbackPrefix.MC_TOPIC}:{topic_id}"
+                ),
+            }
+        ],
+        [
+            {
+                "text": "◀️ К темам",
+                "callback_data": game.constants.CallbackPrefix.MC_BACK,
+            }
+        ],
+    ]

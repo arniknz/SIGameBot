@@ -6,6 +6,7 @@ import typing
 import uuid
 
 import fastapi
+import game.answer_similarity
 import game.constants
 import game.models
 import sqlalchemy
@@ -77,12 +78,15 @@ async def create_question(
             status_code=404,
             detail=game.constants.API_MSG_TOPIC_NOT_FOUND,
         )
-
+    normalized_answer = game.answer_similarity.normalize_answer_text(
+        body.answer
+    )
     question = game.models.QuestionModel(
         topic_id=body.topic_id,
         text=body.text,
         answer=body.answer,
         cost=body.cost,
+        normalized_answer=normalized_answer,
     )
     session.add(question)
     await session.commit()
@@ -130,6 +134,9 @@ async def update_question(
         question.text = body.text
     if body.answer is not None:
         question.answer = body.answer
+        question.normalized_answer = game.answer_similarity.normalize_answer_text(
+            body.answer
+        )
     if body.cost is not None:
         question.cost = body.cost
 
@@ -204,6 +211,27 @@ async def delete_question(
     return fastapi.Response(status_code=204)
 
 
+def _parse_bulk_row(
+    row: dict[str, str],
+    field_map: dict[str, str],
+    row_num: int,
+) -> tuple[str, str, str, int] | str:
+    topic_title = row[field_map["topic"]].strip()
+    question_text = row[field_map["question"]].strip()
+    answer_text = row[field_map["answer"]].strip()
+    cost_raw = row[field_map["cost"]].strip()
+
+    if not all([topic_title, question_text, answer_text, cost_raw]):
+        return f"Row {row_num}: empty required field"
+    try:
+        cost = int(cost_raw)
+        if cost <= 0:
+            raise ValueError
+    except ValueError:
+        return f"Row {row_num}: cost must be a positive integer"
+    return topic_title, question_text, answer_text, cost
+
+
 @router.post("/bulk", response_model=web.api.schemas.BulkImportResult)
 async def bulk_import_csv(
     file: fastapi.UploadFile,
@@ -232,51 +260,57 @@ async def bulk_import_csv(
     field_map = {f.strip().lower(): f for f in reader.fieldnames}
 
     topic_cache: dict[str, uuid.UUID] = {}
-    created = 0
     errors: list[str] = []
+    valid_rows: list[tuple[uuid.UUID, str, str, int]] = []
 
     for i, row in enumerate(reader, start=2):
-        topic_title = row[field_map["topic"]].strip()
-        question_text = row[field_map["question"]].strip()
-        answer_text = row[field_map["answer"]].strip()
-        cost_raw = row[field_map["cost"]].strip()
-
-        if not all([topic_title, question_text, answer_text, cost_raw]):
-            errors.append(f"Row {i}: empty required field")
+        parsed = _parse_bulk_row(row, field_map, i)
+        if isinstance(parsed, str):
+            errors.append(parsed)
             continue
-
-        try:
-            cost = int(cost_raw)
-            if cost <= 0:
-                raise ValueError
-        except ValueError:
-            errors.append(f"Row {i}: cost must be a positive integer")
-            continue
-
+        topic_title, question_text, answer_text, cost = parsed
         if topic_title not in topic_cache:
-            existing = (
-                await session.execute(
-                    sqlalchemy.select(game.models.TopicModel).where(
-                        game.models.TopicModel.title == topic_title,
-                    )
-                )
-            ).scalar_one_or_none()
-            if existing:
-                topic_cache[topic_title] = existing.id
-            else:
-                new_topic = game.models.TopicModel(title=topic_title)
-                session.add(new_topic)
-                await session.flush()
-                topic_cache[topic_title] = new_topic.id
-
-        question = game.models.QuestionModel(
-            topic_id=topic_cache[topic_title],
-            text=question_text,
-            answer=answer_text,
-            cost=cost,
+            topic_cache[topic_title] = await _resolve_or_create_topic(
+                session,
+                topic_title,
+            )
+        valid_rows.append(
+            (topic_cache[topic_title], question_text, answer_text, cost)
         )
-        session.add(question)
-        created += 1
+
+    for topic_id, qtext, answer_text, cost in valid_rows:
+        session.add(
+            game.models.QuestionModel(
+                topic_id=topic_id,
+                text=qtext,
+                answer=answer_text,
+                cost=cost,
+                normalized_answer=game.answer_similarity.normalize_answer_text(
+                    answer_text
+                ),
+            )
+        )
 
     await session.commit()
-    return web.api.schemas.BulkImportResult(created=created, errors=errors)
+    return web.api.schemas.BulkImportResult(
+        created=len(valid_rows), errors=errors
+    )
+
+
+async def _resolve_or_create_topic(
+    session: sqlalchemy.ext.asyncio.AsyncSession,
+    title: str,
+) -> uuid.UUID:
+    existing = (
+        await session.execute(
+            sqlalchemy.select(game.models.TopicModel).where(
+                game.models.TopicModel.title == title,
+            )
+        )
+    ).scalar_one_or_none()
+    if existing:
+        return existing.id
+    new_topic = game.models.TopicModel(title=title)
+    session.add(new_topic)
+    await session.flush()
+    return new_topic.id

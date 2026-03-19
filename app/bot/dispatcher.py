@@ -36,7 +36,9 @@ class Dispatcher:
 
     async def handle_update(self, update: clients.schemas.Update) -> None:
         try:
-            if update.message and update.message.text:
+            if update.message and update.message.document:
+                await self._handle_document(update)
+            elif update.message and update.message.text:
                 await self._handle_message(update)
             elif update.callback_query:
                 await self._handle_callback(update)
@@ -61,6 +63,41 @@ class Dispatcher:
         if update.callback_query and update.callback_query.message:
             return update.callback_query.message.chat.id
         return None
+
+    async def _handle_document(self, update: clients.schemas.Update) -> None:
+        msg = update.message
+        if not msg or not msg.document:
+            return
+        is_private = msg.chat.type == game.constants.ChatType.PRIVATE
+        if not is_private:
+            return
+        doc = msg.document
+        file_name = (doc.file_name or "").lower()
+        if not file_name.endswith(".csv"):
+            await self._tg.send_message(
+                msg.chat.id,
+                "⚠️ Поддерживаются только CSV-файлы. "
+                "Отправьте файл с расширением .csv",
+            )
+            return
+        user = msg.from_user
+        telegram_id = user.id if user else 0
+        chat_id = msg.chat.id
+        try:
+            await self._tg.send_message(chat_id, "⏳ Обработка CSV-файла...")
+            file_path = await self._tg.get_file_path(doc.file_id)
+            csv_content = await self._tg.download_file(file_path)
+            service_responses = await self._content.handle_csv_upload(
+                chat_id, telegram_id, csv_content
+            )
+            responses = bot.views.render_many(service_responses)
+            await self._send_responses(responses)
+        except Exception:
+            logger.exception("CSV upload error")
+            await self._tg.send_message(
+                chat_id,
+                "⚠️ Ошибка обработки файла. Проверьте формат CSV.",
+            )
 
     async def _handle_message(self, update: clients.schemas.Update) -> None:
         msg = update.message

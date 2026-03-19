@@ -110,6 +110,42 @@ def _make_rules(content: game.services.ContentService):
     return handler
 
 
+def _make_my_content(content: game.services.ContentService):
+    async def handler(chat_id: int, telegram_id: int, **_):
+        result = await content.handle_my_content(chat_id, telegram_id)
+        return bot.views.render_many(result)
+
+    return handler
+
+
+def _make_upload_csv() -> collections.abc.Callable[
+    ..., list[game.schemas.GameResponse]
+]:
+    def handler(
+        chat_id: int, **_: typing.Any
+    ) -> list[game.schemas.GameResponse]:
+        return bot.views.render_many(
+            [
+                game.schemas.ServiceResponse(
+                    chat_id,
+                    game.constants.ViewName.PLAIN,
+                    payload={
+                        "text": (
+                            "📤 Загрузка CSV\n\n"
+                            "Отправьте мне CSV-файл со столбцами:\n"
+                            "  topic, question, answer, cost\n\n"
+                            "Пример строки:\n"
+                            "  География,Столица Франции,Париж,100\n\n"
+                            "📌 Новые темы создадутся автоматически."
+                        ),
+                    },
+                )
+            ]
+        )
+
+    return handler
+
+
 def _make_add_topic(dialog: bot.dialog.DialogManager):
     def handler(telegram_id: int, chat_id: int, **_):
         dialog.start_add_topic(telegram_id, game_chat_id=0)
@@ -172,6 +208,12 @@ def _register_commands(
     )
     router.command(game.constants.Command.RULES, private=True)(
         _make_rules(content)
+    )
+    router.command(game.constants.Command.UPLOAD_CSV, private=True)(
+        _make_upload_csv()
+    )
+    router.command(game.constants.Command.MY_CONTENT, private=True)(
+        _make_my_content(content)
     )
     router.command(game.constants.Command.ADD_TOPIC, private=True)(
         _make_add_topic(dialog)
@@ -299,6 +341,46 @@ def _make_cb_addq_topic(dialog: bot.dialog.DialogManager):
     return handler
 
 
+def _make_cb_mc_topic(content: game.services.ContentService):
+    async def handler(
+        match: re.Match[str],
+        chat_id: int,
+        telegram_id: int,
+        **_,
+    ):
+        value = match.group(1)
+        result = await content.handle_my_content_topic(
+            chat_id, telegram_id, value
+        )
+        return bot.views.render_many(result)
+
+    return handler
+
+
+def _make_cb_mc_question(content: game.services.ContentService):
+    async def handler(
+        match: re.Match[str],
+        chat_id: int,
+        telegram_id: int,
+        **_,
+    ):
+        value = match.group(1)
+        result = await content.handle_my_content_question(
+            chat_id, telegram_id, value
+        )
+        return bot.views.render_many(result)
+
+    return handler
+
+
+def _make_cb_mc_back(content: game.services.ContentService):
+    async def handler(chat_id: int, telegram_id: int, **_):
+        result = await content.handle_my_content(chat_id, telegram_id)
+        return bot.views.render_many(result)
+
+    return handler
+
+
 def _register_callbacks(
     router: bot.router.Router,
     content: game.services.ContentService,
@@ -322,3 +404,12 @@ def _register_callbacks(
     router.callback_pattern(
         rf"^{game.constants.CallbackPrefix.ADD_QUESTION_TOPIC}:(.+)$"
     )(_make_cb_addq_topic(dialog))
+    router.callback_pattern(
+        rf"^{game.constants.CallbackPrefix.MC_TOPIC}:(.+)$"
+    )(_make_cb_mc_topic(content))
+    router.callback_pattern(
+        rf"^{game.constants.CallbackPrefix.MC_QUESTION}:(.+)$"
+    )(_make_cb_mc_question(content))
+    router.callback(game.constants.CallbackPrefix.MC_BACK)(
+        _make_cb_mc_back(content)
+    )

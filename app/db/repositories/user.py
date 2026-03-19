@@ -36,6 +36,18 @@ class UserRepository:
         )
         return (await self._session.execute(statement)).scalar_one_or_none()
 
+    async def ensure_exists(
+        self,
+        telegram_id: int,
+    ) -> game.models.UserModel:
+        user = await self.get_by_telegram_id(telegram_id)
+        if user is not None:
+            return user
+        new_user = game.models.UserModel(telegram_id=telegram_id, username="")
+        self._session.add(new_user)
+        await self._session.flush()
+        return new_user
+
     async def get_by_id(
         self,
         user_id: int,

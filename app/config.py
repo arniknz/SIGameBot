@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import dataclasses
 import os
+from dataclasses import dataclass
 
 import dotenv
+import game.constants
 
 
-@dataclasses.dataclass
+@dataclass
 class Config:
     bot_token: str
 
@@ -33,6 +34,17 @@ class Config:
     admin_username: str = "admin"
     admin_password: str = "admin"
     admin_api_port: int = 8000
+
+    answer_fuzzy_ratio_min: float = game.constants.ANSWER_FUZZY_RATIO_DEFAULT
+    max_question_word_overlap: float = (
+        game.constants.MAX_QUESTION_WORD_OVERLAP_DEFAULT
+    )
+
+    openrouter_api_key: str = ""
+    openrouter_model: str = game.constants.OPENROUTER_MODEL_DEFAULT
+
+    lobby_timeout: int = game.constants.LOBBY_TIMEOUT_DEFAULT
+    max_csv_rows: int = game.constants.MAX_CSV_ROWS_DEFAULT
 
     @property
     def db_url(self) -> str:
@@ -79,4 +91,35 @@ class Config:
             admin_username=os.getenv("ADMIN_USERNAME", "admin"),
             admin_password=os.getenv("ADMIN_PASSWORD", "admin"),
             admin_api_port=int(os.getenv("ADMIN_API_PORT", "8000")),
+            answer_fuzzy_ratio_min=float(
+                os.getenv(
+                    game.constants.ENV_ANSWER_FUZZY_RATIO,
+                    str(game.constants.ANSWER_FUZZY_RATIO_DEFAULT),
+                )
+            ),
+            max_question_word_overlap=float(
+                os.getenv(
+                    game.constants.ENV_MAX_QUESTION_WORD_OVERLAP,
+                    str(game.constants.MAX_QUESTION_WORD_OVERLAP_DEFAULT),
+                )
+            ),
+            openrouter_api_key=os.getenv(
+                game.constants.ENV_OPENROUTER_API_KEY, ""
+            ),
+            openrouter_model=os.getenv(
+                game.constants.ENV_OPENROUTER_MODEL,
+                game.constants.OPENROUTER_MODEL_DEFAULT,
+            ),
+            lobby_timeout=int(
+                os.getenv(
+                    game.constants.ENV_LOBBY_TIMEOUT,
+                    str(game.constants.LOBBY_TIMEOUT_DEFAULT),
+                )
+            ),
+            max_csv_rows=int(
+                os.getenv(
+                    game.constants.ENV_MAX_CSV_ROWS,
+                    str(game.constants.MAX_CSV_ROWS_DEFAULT),
+                )
+            ),
         )

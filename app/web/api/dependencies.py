@@ -44,6 +44,12 @@ async def get_session() -> typing.AsyncIterator[
         yield session
 
 
+def get_config() -> config.Config:
+    if _state.cfg is None:
+        raise RuntimeError("Config not initialized")
+    return _state.cfg
+
+
 def require_admin(
     credentials: typing.Annotated[
         fastapi.security.HTTPBasicCredentials,

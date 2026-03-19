@@ -40,16 +40,20 @@ class Bot:
             question_selection_timeout=cfg.question_selection_timeout,
             buzzer_timeout=cfg.buzzer_timeout,
             answer_timeout=cfg.answer_timeout,
+            answer_fuzzy_ratio_min=cfg.answer_fuzzy_ratio_min,
+            max_question_word_overlap=cfg.max_question_word_overlap,
         )
         self._content = game.services.ContentService(
             session_factory,
             buzzer_timeout=cfg.buzzer_timeout,
             answer_timeout=cfg.answer_timeout,
+            max_csv_rows=cfg.max_csv_rows,
         )
         self._timer = game.services.TimerService(
             session_factory,
             question_selection_timeout=cfg.question_selection_timeout,
             max_failed_selections=cfg.max_failed_selections,
+            lobby_timeout=cfg.lobby_timeout,
         )
         self._shop = game.services.ShopService(session_factory)
         self._dialog = bot.dialog.DialogManager()

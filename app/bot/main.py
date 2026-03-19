@@ -6,6 +6,7 @@ import signal
 
 import bot.base
 import config
+import nlp.openrouter
 
 
 def setup_logging(cfg: config.Config) -> None:
@@ -54,6 +55,14 @@ async def main() -> None:
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, _shutdown, sig)
 
+    if not cfg.openrouter_api_key:
+        raise RuntimeError("OPENROUTER_API_KEY must be set in environment")
+    nlp.openrouter.set_openrouter_client(
+        nlp.openrouter.OpenRouterClient(
+            api_key=cfg.openrouter_api_key,
+            model=cfg.openrouter_model,
+        )
+    )
     await new_bot.start()
     logger.info("Bot is running. Press Ctrl+C to stop.")
     await stop_event.wait()

@@ -6,6 +6,7 @@ import typing
 
 import config
 import fastapi
+import nlp.openrouter
 import web.api.dependencies
 import web.api.routes.games
 import web.api.routes.questions
@@ -25,6 +26,14 @@ async def lifespan(app: fastapi.FastAPI) -> typing.AsyncIterator[None]:
     cfg = _get_config()
     web.api.dependencies.init_auth(cfg)
     await web.api.dependencies.init_db(cfg)
+    if not cfg.openrouter_api_key:
+        raise RuntimeError("OPENROUTER_API_KEY must be set in environment")
+    nlp.openrouter.set_openrouter_client(
+        nlp.openrouter.OpenRouterClient(
+            api_key=cfg.openrouter_api_key,
+            model=cfg.openrouter_model,
+        )
+    )
     logger.info("Admin API started on port %s", cfg.admin_api_port)
 
     yield

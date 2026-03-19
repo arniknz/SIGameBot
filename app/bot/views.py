@@ -8,7 +8,7 @@ import game.constants
 import game.schemas
 import game.shop_items
 
-type _P = dict[str, typing.Any]
+_P = dict[str, typing.Any]
 
 _MEDAL = {1: "🥇", 2: "🥈", 3: "🥉"}
 
@@ -367,12 +367,14 @@ def _render_help(cid: int, _p: _P) -> game.schemas.GameResponse:
             "  /score — Показать счёт\n\n"
             "💬 В личке с ботом:\n"
             "  /my_games — Ваши игры\n"
+            "  /my_content — Ваши темы и вопросы\n"
             "  /add_topic <название> — Создать тему\n"
             "  /add_question — Добавить вопрос\n"
             "  /delete_topic — Скрыть тему\n"
             "  /delete_question — Скрыть вопрос\n"
             "  /restore_topic — Восстановить тему\n"
             "  /restore_question — Восстановить вопрос\n"
+            "  /upload_csv — Загрузить вопросы из CSV\n"
             "  /shop — Магазин предметов\n"
             "  /balance — Ваш баланс\n\n"
             "ℹ️ Везде:\n"
@@ -593,6 +595,95 @@ def _render_item_used_group(cid: int, p: _P) -> game.schemas.GameResponse:
     )
 
 
+def _render_lobby_cancelled(cid: int, _p: _P) -> game.schemas.GameResponse:
+    return _make(
+        cid,
+        "😢 Игра отменена из-за неактивности в лобби.",
+        keyboard=[],
+    )
+
+
+def _render_csv_upload_result(cid: int, p: _P) -> game.schemas.GameResponse:
+    created = p["created"]
+    errors = p.get("errors", [])
+    lines = [f"📊 Импорт CSV завершён: {created} вопросов добавлено."]
+    if errors:
+        lines.append(f"\n⚠️ Ошибки ({len(errors)}):")
+        lines.extend(f"  • {err}" for err in errors[:10])
+        if len(errors) > 10:
+            lines.append(f"  … и ещё {len(errors) - 10}")
+    return _make(cid, "\n".join(lines))
+
+
+def _render_my_content_topics(cid: int, p: _P) -> game.schemas.GameResponse:
+    topics = p["topics_with_counts"]
+    total_q = sum(count for _, count in topics)
+    lines = [
+        f"📚 Ваш контент: {len(topics)} тем, {total_q} вопросов\n",
+        "Выберите тему для просмотра:",
+    ]
+    return _make(
+        cid,
+        "\n".join(lines),
+        keyboard=bot.keyboards.my_content_topics(topics),
+    )
+
+
+def _render_my_content_questions(
+    cid: int, p: _P
+) -> game.schemas.GameResponse:
+    topic_title = p["topic_title"]
+    questions = p["questions"]
+    if not questions:
+        return _make(
+            cid,
+            f"📂 Тема «{topic_title}»\n\n📭 У вас нет вопросов в этой теме.",
+            keyboard=bot.keyboards.my_content_questions(
+                [], p["topic_id"]
+            ),
+        )
+    lines = [
+        f"📂 Тема «{topic_title}» — {len(questions)} вопросов\n",
+        "Нажмите на вопрос, чтобы увидеть ответ:",
+    ]
+    return _make(
+        cid,
+        "\n".join(lines),
+        keyboard=bot.keyboards.my_content_questions(
+            questions, p["topic_id"]
+        ),
+    )
+
+
+def _render_my_content_question_detail(
+    cid: int, p: _P
+) -> game.schemas.GameResponse:
+    return _make(
+        cid,
+        (
+            f"📂 Тема: {p['topic_title']}\n"
+            f"💰 Стоимость: {p['question_cost']} очков\n\n"
+            f"❓ {p['question_text']}\n\n"
+            f"✅ Ответ: {p['question_answer']}"
+        ),
+        keyboard=bot.keyboards.my_content_question_back(p["topic_id"]),
+    )
+
+
+def _render_csv_upload_preview(cid: int, p: _P) -> game.schemas.GameResponse:
+    total = p["total"]
+    sample = p.get("sample", [])
+    lines = [f"📋 Предпросмотр CSV ({total} строк):"]
+    lines.extend(
+        f"  [{row['topic']}] {row['question'][:40]}… "
+        f"→ {row['answer']} ({row['cost']})"
+        for row in sample
+    )
+    if total > len(sample):
+        lines.append(f"  … и ещё {total - len(sample)}")
+    return _make(cid, "\n".join(lines))
+
+
 def _render_balance_info(cid: int, p: _P) -> game.schemas.GameResponse:
     balance = p["balance"]
     item_count = p.get("item_count", 0)
@@ -759,6 +850,16 @@ _RENDERERS: dict[game.constants.ViewName, Renderer] = {
     game.constants.ViewName.ITEM_USED_GROUP: _render_item_used_group,
     game.constants.ViewName.BALANCE_INFO: _render_balance_info,
     game.constants.ViewName.DAILY_REWARD_CLAIMED: _render_daily_reward_claimed,
+    game.constants.ViewName.LOBBY_CANCELLED: _render_lobby_cancelled,
+    game.constants.ViewName.CSV_UPLOAD_RESULT: _render_csv_upload_result,
+    game.constants.ViewName.CSV_UPLOAD_PREVIEW: _render_csv_upload_preview,
+    game.constants.ViewName.MY_CONTENT_TOPICS: _render_my_content_topics,
+    game.constants.ViewName.MY_CONTENT_QUESTIONS: (
+        _render_my_content_questions
+    ),
+    game.constants.ViewName.MY_CONTENT_QUESTION_DETAIL: (
+        _render_my_content_question_detail
+    ),
 }
 
 
