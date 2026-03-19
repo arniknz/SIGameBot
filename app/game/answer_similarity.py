@@ -66,10 +66,9 @@ async def validate_player_answer(
     if not player or not correct:
         return False
 
-    if player == correct or _fuzzy_or_substring_match(
+    fast_match = player == correct or _fuzzy_or_substring_match(
         player, correct, fuzzy_ratio_min
-    ):
-        return True
+    )
 
     if normalize_answer_text(question_text):
         overlap = _question_word_overlap_ratio(player_answer_raw, question_text)
@@ -77,6 +76,7 @@ async def validate_player_answer(
             return False
 
     client = nlp.openrouter.get_openrouter_client()
-    return await client.check_answer(
+    model_match = await client.check_answer(
         question_text, correct_answer_raw, player_answer_raw
     )
+    return fast_match or model_match

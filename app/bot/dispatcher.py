@@ -139,6 +139,8 @@ class Dispatcher:
             return
 
         if not is_private:
+            if await self._gameplay.can_user_answer_now(chat_id, telegram_id):
+                await self._tg.send_message(chat_id, "⏳ Проверяю ответ...")
             responses = await self._gameplay.handle_possible_answer(
                 chat_id, telegram_id, username, text
             )

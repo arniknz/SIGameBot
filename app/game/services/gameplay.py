@@ -569,6 +569,40 @@ class GameplayService:
                 text,
             )
 
+    async def can_user_answer_now(
+        self,
+        chat_id: int,
+        telegram_id: int,
+    ) -> bool:
+        async with self._session_factory() as session, session.begin():
+            game_repo = db.repositories.game.GameRepository(session)
+            participant_repo = (
+                db.repositories.participant.ParticipantRepository(session)
+            )
+
+            active_game = await game_repo.get_active_by_chat(chat_id)
+            if (
+                active_game is None
+                or active_game.status != game.constants.GameStatus.ACTIVE
+            ):
+                return False
+
+            game_state = await game_repo.get_state_for_update(active_game.id)
+            if (
+                game_state is None
+                or game_state.status != game.constants.GamePhase.WAITING_ANSWER
+            ):
+                return False
+
+            participant = await participant_repo.get_by_telegram_id(
+                active_game.id,
+                telegram_id,
+            )
+            if participant is None:
+                return False
+
+            return participant.id == game_state.buzzer_pressed_by
+
     async def handle_score(
         self,
         chat_id: int,
