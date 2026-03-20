@@ -1,26 +1,17 @@
-{
-    "name": "SIGameBot",
-    "dockerComposeFile": [
-        "../docker-compose.yml",
-        "docker-compose.yml"
-    ],
-    "service": "bot",
-    "workspaceFolder": "/workspaces/SIGameBot",
-    "forwardPorts": [8000],
-    "portsAttributes": {
-        "8000": {
-            "label": "Admin API",
-            "onAutoForward": "openPreview",
-            "visibility": "public"
-        }
-    },
-    "customizations": {
-        "vscode": {
-            "extensions": [
-                "ms-azuretools.vscode-docker"
-            ]
-        }
-    },
-    "remoteUser": "vscode",
-    "shutdownAction": "stopCompose"
-}
+version: '3.8'
+
+services:
+  bot:
+    image: ://mcr.microsoft.com
+    volumes:
+      - ..:/workspace:cached
+    command: sleep infinity
+    working_dir: /workspace
+    user: vscode 
+
+  admin_api:
+    image: ://mcr.microsoft.com
+    volumes:
+      - ..:/workspace:cached
+    working_dir: /workspace
+
