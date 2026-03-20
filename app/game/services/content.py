@@ -902,7 +902,6 @@ class ContentService:
     ) -> list[game.schemas.ServiceResponse]:
         async with self._session_factory() as session, session.begin():
             question_repo = db.repositories.question.QuestionRepository(session)
-
             try:
                 question_id = uuid.UUID(question_id_str)
             except ValueError:

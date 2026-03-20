@@ -1,218 +1,117 @@
 # SIGameBot
 
-Multiplayer Jeopardy-like (SI Game) bot for Telegram group chats. Interface in **Russian**.
+SIGameBot is a multiplayer Jeopardy-like (SI Game) bot for Telegram group chats.
+The gameplay interface is in Russian.
 
----
+## Table of Contents
 
-## INFO
+- [Features](#features)
+- [Quick Start (Docker)](#quick-start-docker)
+- [How to Play](#how-to-play)
+- [Managing Topics and Questions](#managing-topics-and-questions)
+- [Shop and Balance (Private Chat)](#shop-and-balance-private-chat)
+- [Admin HTTP API](#admin-http-api)
+- [Configuration Reference](#configuration-reference)
+- [Development](#development)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
 
-1. [What You Need Before Starting](#what-you-need-before-starting)
-2. [Step 1 — Install Docker](#step-1--install-docker)
-3. [Step 2 — Create a Telegram Bot](#step-2--create-a-telegram-bot)
-4. [Step 3 — Download the Project](#step-3--download-the-project)
-5. [Step 4 — Configure the Bot](#step-4--configure-the-bot)
-6. [Step 5 — Launch](#step-5--launch)
-7. [Step 6 — Stop the Bot](#step-6--stop-the-bot)
-8. [How to Play](#how-to-play)
-9. [Managing Topics and Questions](#managing-topics-and-questions)
-10. [Shop and Balance (Private Chat)](#shop-and-balance-private-chat)
-11. [Configuration Reference](#configuration-reference)
-12. [Development](#development)
+## Features
 
----
+- Multiplayer game sessions in Telegram group chats
+- Host-controlled lobby, game flow, scoring, and buzzer rounds
+- Topic/question management in private chat with the bot
+- In-game shop and balance system
+- Optional answer-similarity support via OpenRouter LLM API
+- Optional FastAPI admin API for managing users/games/topics/questions
 
-## What You Need Before Starting
+## Quick Start (Docker)
 
-- A computer running **Linux**, **macOS**, or **Windows**
-- An internet connection
-- A Telegram account
+### 1) Prerequisites
 
-No programming experience required — just follow the steps below! :D
+- Docker Engine + Docker Compose plugin
+- Telegram account
+- A bot token from [@BotFather](https://t.me/BotFather)
 
----
-
-## Step 1 — Install Docker
-
-Docker runs the bot and its database inside isolated containers so you don't need to install Python or PostgreSQL on your machine. Only docker.
-
-### Linux
-
-Open a terminal and run these commands one by one (as root):
-
-```bash
-sudo apt update
-sudo apt install -y ca-certificates curl
-sudo install -m 0755 -d /etc/apt/keyrings
-sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-sudo chmod a+r /etc/apt/keyrings/docker.asc
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt update
-sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-```
-
-Allow your user to run Docker without `sudo`:
-
-```bash
-sudo usermod -aG docker $USER
-```
-
-**Log out and log back in** for the group change to take effect, then verify:
+Verify Docker:
 
 ```bash
 docker --version
 docker compose version
 ```
 
-**Hello World from docker!**:
+### 2) Clone the repository
 
 ```bash
-docker run hello-world
-```
-
-### macOS
-
-1. Download **Docker Desktop** from [https://www.docker.com/products/docker-desktop/](https://www.docker.com/products/docker-desktop/)
-2. Open the downloaded `.dmg` file and drag Docker to Applications
-3. Launch Docker Desktop from Applications and wait until the whale icon in the menu bar is steady
-4. Open Terminal and verify:
-
-```bash
-docker --version
-docker compose version
-```
-
-### Windows
-
-1. Download **Docker Desktop** from [https://www.docker.com/products/docker-desktop/](https://www.docker.com/products/docker-desktop/)
-2. Run the installer and **enable WSL 2** when prompted
-3. Restart your computer if asked
-4. Launch Docker Desktop and wait until it shows "Docker is running"
-5. Open **PowerShell** and verify:
-
-```powershell
-docker --version
-docker compose version
-```
-
----
-
-## Step 2 — Create a Telegram Bot
-
-1. Open Telegram and search for **@BotFather**
-2. Send `/newbot`
-3. Choose a display name for your bot (e.g. `My Jeopardy Bot`)
-4. Choose a username ending with `bot` (e.g. `my_jeopardy_game_bot`)
-5. BotFather will reply with a **token** that looks like `123456789:ABCdefGHI-jklMNOpqrSTUvwxYZ`
-6. **Copy this token** — you'll need it in the next step
-
----
-
-## Step 3 — Download the Project
-
-Open a terminal and clone the repository:
-
-**HTTPS:**
-
-```bash
-git clone https://github.com/YOUR_USERNAME/SIGameBot.git
+git clone https://github.com/arniknz/SIGameBot.git
 cd SIGameBot
 ```
 
-**SSH:**
-
-```bash
-git clone git@github.com:YOUR_USERNAME/SIGameBot.git
-cd SIGameBot
-```
-
-If you don't have Git installed:
-- **Linux:** `sudo apt install git`
-- **macOS:** `xcode-select --install`
-- **Windows:** download from [https://git-scm.com/downloads](https://git-scm.com/downloads)
-
----
-
-## Step 4 — Configure the Bot
-
-Create your configuration file:
+### 3) Configure environment variables
 
 ```bash
 cp .env.example .env
 ```
 
-Open `.env` in any text editor (Notepad, nano, VS Code — anything works) and paste your bot token:
+At minimum, set:
 
 ```dotenv
 BOT_TOKEN=123456789:ABCdefGHI-jklMNOpqrSTUvwxYZ
 ```
 
-That's the only required setting. All other values have sensible defaults and can be left as-is. See [Configuration Reference](#configuration-reference) for details.
+Optional (for LLM-based answer similarity):
 
----
+```dotenv
+OPENROUTER_API_KEY=your_api_key_here
+OPENROUTER_MODEL=openai/gpt-oss-20b:free
+OPENROUTER_MODEL_FALLBACKS=
+```
 
-## Step 5 — Launch
-
-From the project folder, run:
+### 4) Start services
 
 ```bash
 docker compose up --build -d
 ```
 
-This will:
-- Download the required images (first time only, may take a few minutes)
-- Create the database and apply the schema automatically
-- Start the bot
+This starts:
+- `db` (PostgreSQL)
+- `rabbitmq`
+- `bot`
+- `admin_api`
 
-Check that everything is running:
+The bot container applies Alembic migrations on startup.
 
-```bash
-docker compose ps -a
-```
-
-The bot container (`sigamebot-bot-1`) and the database (`sigamebot-db-1`) should show status `Up`. RabbitMQ and the optional admin API may also be running.
-
-Check the bot logs to confirm it connected:
+### 5) Check health
 
 ```bash
+docker compose ps
 docker compose logs bot
 ```
 
-Look for the line `Bot is running`.
+Look for `Bot is running` in bot logs.
 
----
-
-## Step 6 — Stop the Bot
-
-To stop:
+### 6) Stop services
 
 ```bash
 docker compose down
 ```
 
-To stop **and delete all game data** (reset the database):
+Remove all persisted game data:
 
 ```bash
 docker compose down -v
 ```
 
-To restart after stopping:
-
-```bash
-docker compose up -d
-```
-
----
-
 ## How to Play
 
-### Setting Up a Game
+### Setting Up a Game (Group Chat)
 
-1. **Add the bot** to a Telegram group chat (use the bot's username to find it).
-2. **Create a game** — any member sends `/start` in the group. That person becomes the **host**.
-3. **Players join** using the **Войти** (Join) button; others can press **Смотреть** (Spectate) to watch.
-4. The **host starts the game** with the **Старт** (Start) button or `/start_game` (at least 2 players required).
+1. Add the bot to a Telegram group chat.
+2. Any member sends `/start` to create a new game and become host.
+3. Players join with **Войти**, spectators use **Смотреть**.
+4. Host starts the game with **Старт** or `/start_game` (minimum 2 players).
 
-The lobby message shows **inline buttons in two columns** (readable on mobile):
+The lobby message includes inline buttons:
 
 - **Войти** · **Смотреть** — join as player or spectate  
 - **Выйти** · **Счёт** — leave game, show score  
@@ -223,14 +122,14 @@ The lobby message shows **inline buttons in two columns** (readable on mobile):
 
 ### During the Game
 
-1. A random player is chosen to pick the first question.
-2. The bot shows a board with topics and point values; the current player taps a cell.
-3. After the question is shown, everyone has **10 seconds** (configurable) to press **Звонок** (Buzzer).
-4. The first to buzz has **15 seconds** (configurable) to type their answer in the chat.
-5. **Correct** — player gets the points and chooses the next question.
-6. **Wrong** — points are deducted, correct answer is shown, same player chooses again.
-7. **No one buzzes** — correct answer is revealed, same player chooses again.
-8. The game ends when all questions are played; the final scoreboard is shown.
+1. A random player picks the first question.
+2. The bot shows topics and prices; the current player selects a cell.
+3. Everyone has `BUZZER_TIMEOUT` seconds to press **Звонок**.
+4. First buzzed player has `ANSWER_TIMEOUT` seconds to answer.
+5. Correct answer: points added, player chooses next.
+6. Wrong answer: points deducted, correct answer shown, same player chooses next.
+7. No buzz: correct answer shown, same player chooses next.
+8. Game ends when all questions are used, then final scoreboard is shown.
 
 ### Commands in Group Chat
 
@@ -241,8 +140,6 @@ The lobby message shows **inline buttons in two columns** (readable on mobile):
 | `/score` | Show current scoreboard |
 
 Join, leave, spectate, start, stop, score, rules, help, and shop are also available as **inline buttons** under the lobby/game message. **Правила** and **Справка** open the bot in private chat to avoid spamming the group.
-
----
 
 ## Managing Topics and Questions
 
@@ -261,7 +158,7 @@ Topics and questions are managed in a **private chat** with the bot (click **У�
 | `/rules` | Show game rules |
 | `/cancel` | Cancel current action |
 
-In a group, `/help` and `/rules` do not post the full text there — the bot asks you to open a private chat and use the **Правила** / **Справка** buttons or send the command in DM.
+In group chats, `/help` and `/rules` redirect users to private chat.
 
 ## Shop and Balance (Private Chat)
 
@@ -274,11 +171,24 @@ In private chat with the bot:
 
 Use the **Магазин** button in the lobby to open the shop in private chat. Items can be used during the game (e.g. hints, double points).
 
----
+## Admin HTTP API
+
+`docker compose` also starts `admin_api` (FastAPI) on:
+
+- `http://localhost:${ADMIN_API_PORT}` (default: `8000`)
+- OpenAPI docs: `http://localhost:${ADMIN_API_PORT}/docs`
+
+Default credentials from `.env.example`:
+
+- `ADMIN_USERNAME=admin`
+- `ADMIN_PASSWORD=secure123`
+
+Change these values in `.env` before exposing the API anywhere.
 
 ## Configuration Reference
 
-All settings go in the `.env` file. Only `BOT_TOKEN` is required.
+All settings are read from `.env`.
+Only `BOT_TOKEN` is strictly required for basic bot startup.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -293,38 +203,66 @@ All settings go in the `.env` file. Only `BOT_TOKEN` is required.
 | `RABBITMQ_USER` | `guest` | RabbitMQ user |
 | `RABBITMQ_PASSWORD` | `guest` | RabbitMQ password |
 | `WORKERS_COUNT` | `3` | Number of concurrent update workers |
+| `LOBBY_TIMEOUT` | `3600` | Lobby timeout in seconds |
 | `QUESTION_SELECTION_TIMEOUT` | `30` | Seconds for the current player to choose a question |
 | `BUZZER_TIMEOUT` | `10` | Seconds to wait for a buzzer press |
 | `ANSWER_TIMEOUT` | `15` | Seconds to wait for an answer after buzzing |
 | `LOG_LEVEL` | `INFO` | Log verbosity: DEBUG, INFO, WARNING, ERROR |
 | `LOG_FILE` | `logs/bot.log` | Log file path (auto-rotated at 10 MB) |
+| `ADMIN_USERNAME` | `admin` | Basic auth username for admin API |
+| `ADMIN_PASSWORD` | `secure123` | Basic auth password for admin API |
 | `ADMIN_API_PORT` | `8000` | Port for the optional admin API (when running with docker compose) |
+| `OPENROUTER_API_KEY` | `your_api_key_here` | API key for OpenRouter integration |
+| `OPENROUTER_MODEL` | `qwen/qwen3-next-80b-a3b-instruct:free` | Primary LLM for answer similarity |
+| `OPENROUTER_MODEL_FALLBACKS` | *(empty)* | Comma-separated fallback LLM models |
+| `MAX_CSV_ROWS` | `1000` | Max CSV rows for question import operations |
 
 When using Docker, `DB_HOST`, `DB_PORT`, and RabbitMQ settings are applied by `docker-compose.yml`; you usually only set `BOT_TOKEN` and optionally the timeouts and log level.
 
----
-
 ## Development
 
-Install all dependencies (prod + test tools):
+### Local Python setup
+
+Use Python 3.12.
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements/dev.txt
 ```
 
-Lint the code:
+### Run bot locally
+
+```bash
+alembic upgrade head
+python -m bot.main
+```
+
+### Lint and format checks
 
 ```bash
 ruff check .
 ```
 
-Auto-fix lint issues:
+Auto-fix:
 
 ```bash
 ruff check --fix .
 ```
 
----
+### Run tests
+
+```bash
+pytest
+```
+
+## Troubleshooting
+
+- If `bot` cannot connect to Telegram, verify `BOT_TOKEN`.
+- If `db` is unhealthy, inspect `docker compose logs db`.
+- If migrations fail, inspect `docker compose logs bot`.
+- If admin API auth fails, verify `ADMIN_USERNAME` and `ADMIN_PASSWORD`.
+- If answer similarity is unavailable, configure `OPENROUTER_API_KEY`.
 
 ## License
 
