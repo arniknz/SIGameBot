@@ -63,7 +63,7 @@ Optional (for LLM-based answer similarity):
 
 ```dotenv
 OPENROUTER_API_KEY=your_api_key_here
-OPENROUTER_MODEL=qwen/qwen3-next-80b-a3b-instruct:free
+OPENROUTER_MODEL=openai/gpt-oss-20b:free
 OPENROUTER_MODEL_FALLBACKS=
 ```
 
