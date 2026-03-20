@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  bot:
+    volumes:
+      - ..:/workspace:cached
+    command: sleep infinity
+    working_dir: /workspace
+
+  admin_api:
+    volumes:
+      - ..:/workspace:cached
+    working_dir: /workspace
