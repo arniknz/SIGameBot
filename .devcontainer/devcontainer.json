@@ -1,11 +1,8 @@
 {
     "name": "SIGameBot",
-    "dockerComposeFile": [
-        "../docker-compose.yml",
-        "docker-compose.yml"
-    ],
+    "dockerComposeFile": "../docker-compose.yml",
     "service": "bot",
-    "workspaceFolder": "/workspaces/SIGameBot",
+    "workspaceFolder": "/app",
     "forwardPorts": [8000],
     "portsAttributes": {
         "8000": {
@@ -21,6 +18,7 @@
             ]
         }
     },
+    "postCreateCommand": "docker compose up -d",
     "remoteUser": "vscode",
     "shutdownAction": "stopCompose"
 }
