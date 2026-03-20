@@ -5,7 +5,7 @@
         "docker-compose.yml"
     ],
     "service": "bot",
-    "workspaceFolder": "/workspace",
+    "workspaceFolder": "/workspaces/SIGameBot",
     "forwardPorts": [8000],
     "portsAttributes": {
         "8000": {
@@ -21,7 +21,6 @@
             ]
         }
     },
-    "postCreateCommand": "docker compose up -d",
     "remoteUser": "vscode",
     "shutdownAction": "stopCompose"
 }
