@@ -1,10 +1,11 @@
 {
     "name": "SIGameBot",
     "dockerComposeFile": [
-        "../docker-compose.yml"
+        "../docker-compose.yml",
+        "docker-compose.yml"
     ],
     "service": "bot",
-    "workspaceFolder": "/app",
+    "workspaceFolder": "/workspace",
     "forwardPorts": [8000],
     "portsAttributes": {
         "8000": {
