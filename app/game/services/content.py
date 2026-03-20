@@ -901,11 +901,7 @@ class ContentService:
         question_id_str: str,
     ) -> list[game.schemas.ServiceResponse]:
         async with self._session_factory() as session, session.begin():
-            user_repo = db.repositories.user.UserRepository(session)
             question_repo = db.repositories.question.QuestionRepository(session)
-
-            await user_repo.ensure_exists(telegram_id)
-
             try:
                 question_id = uuid.UUID(question_id_str)
             except ValueError:

@@ -84,12 +84,12 @@ def _render_lobby(cid: int, p: _P) -> game.schemas.GameResponse:
 
 
 def _render_player_joined(cid: int, p: _P) -> game.schemas.GameResponse:
-    names = p["player_names"]
+    player_names = p.get("player_names", [])
     return _make(
         cid,
         (
             f"🎉 {p['username']} присоединился(ась) к игре!\n\n"
-            f"👥 Игроки ({len(names)}): " + ", ".join(names)
+            f"👥 Игроки ({len(player_names)}): " + ", ".join(player_names)
         ),
     )
 
